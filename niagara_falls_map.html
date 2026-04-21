@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Niagara Falls Routes - Niagara Region Transit">
+    <title>Niagara Falls Routes - Niagara Region Transit</title>
+
+    <!-- Mapbox GL JS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+
+    <style>
+    :root {
+        --color-primary: #004B87;
+        --color-bg: #ffffff;
+        --color-bg-secondary: #f8f9fa;
+        --color-text: #212529;
+        --color-text-muted: #6c757d;
+        --color-border: #dee2e6;
+        --font-size-base: 16px;
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+        --transition: all 0.2s ease;
+        --min-touch-target: 44px;
+    }
+
+    /* Dark Mode */
+    .dark-mode {
+        --color-bg: #1a1a2e;
+        --color-bg-secondary: #16213e;
+        --color-text: #e9ecef;
+        --color-text-muted: #adb5bd;
+        --color-border: #343a40;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: var(--font-size-base);
+        line-height: 1.5;
+        color: var(--color-text);
+        background: var(--color-bg);
+        overflow-x: hidden;
+    }
+
+    /* Skip Links */
+    .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: var(--color-primary);
+        color: white;
+        padding: 8px 16px;
+        text-decoration: none;
+        z-index: 10000;
+        border-radius: var(--radius-sm);
+    }
+
+    .skip-link:focus {
+        top: 8px;
+        left: 8px;
+    }
+
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* Main Layout */
+    .map-app {
+        display: flex;
+        height: 100vh;
+        height: 100dvh;
+        position: relative;
+    }
+
+    .map-container {
+        flex: 1;
+        position: relative;
+        background: var(--color-bg-secondary);
+    }
+
+    #system-map {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Map Controls */
+    .map-controls {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 100;
+    }
+
+    .control-btn {
+        width: var(--min-touch-target);
+        height: var(--min-touch-target);
+        background: var(--color-bg);
+        color: var(--color-text);
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .control-btn:hover {
+        background: var(--color-bg-secondary);
+        transform: scale(1.05);
+    }
+
+    .control-btn:focus {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    /* Search Box */
+    .search-container {
+        padding: 12px;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        background: var(--color-bg);
+        color: var(--color-text);
+    }
+
+    .search-input:focus {
+        outline: 2px solid var(--color-primary);
+        border-color: var(--color-primary);
+    }
+
+    /* Effective Dates */
+    .effective-dates {
+        padding: 8px 12px;
+        background: var(--color-bg-secondary);
+        border-bottom: 1px solid var(--color-border);
+        font-size: 12px;
+        color: var(--color-text-muted);
+        text-align: center;
+    }
+
+    /* Help Section */
+    .help-toggle {
+        background: none;
+        border: 1px solid var(--color-text);
+        border-radius: var(--radius-sm);
+        color: var(--color-text);
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: var(--transition);
+        flex-shrink: 0;
+    }
+
+    .help-toggle:hover {
+        background: var(--color-bg-secondary);
+        color: var(--color-text);
+    }
+
+    .help-section {
+        display: none;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-bg-secondary);
+        font-size: 13px;
+        color: var(--color-text);
+        line-height: 1.5;
+    }
+
+    .help-section.expanded {
+        display: block;
+    }
+
+    .help-section ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .help-section li {
+        padding: 4px 0;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .help-section li:last-child {
+        border-bottom: none;
+    }
+
+    .help-section strong {
+        color: var(--color-text);
+    }
+
+    .help-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 8px;
+    }
+
+    /* Route Panel - Desktop */
+    @media (min-width: 768px) {
+        .route-panel {
+            width: 380px;
+            height: 100%;
+            background: var(--color-bg);
+            border-left: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sheet-handle {
+            display: none;
+        }
+
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .panel-close, .selected-route-header {
+            display: none;
+        }
+
+        .show-all-btn {
+            padding: 8px 16px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .show-all-btn:hover {
+            opacity: 0.9;
+        }
+    }
+
+    /* Route Panel - Mobile Bottom Sheet */
+    @media (max-width: 767px) {
+        .route-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--color-bg);
+            border-top-left-radius: var(--radius-lg);
+            border-top-right-radius: var(--radius-lg);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            transition: height 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .route-panel.expanded {
+            height: 70vh;
+        }
+
+        .sheet-handle {
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .handle-bar {
+            width: 40px;
+            height: 4px;
+            background: var(--color-border);
+            border-radius: 2px;
+        }
+
+        .panel-header {
+            padding: 0 16px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 16px;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .route-panel.expanded .panel-content {
+            display: block;
+        }
+
+        .panel-close {
+            display: none;
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--color-text-muted);
+        }
+
+        .route-panel.expanded .panel-close {
+            display: block;
+        }
+
+        .show-all-btn {
+            padding: 6px 12px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .selected-route-header {
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .route-panel.has-selection .default-header {
+            display: none;
+        }
+
+        .route-panel.has-selection .selected-route-header {
+            display: flex;
+        }
+
+        .selected-route-header .route-badge {
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .selected-route-header .route-name {
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+    }
+
+    /* Route Categories */
+    .route-category {
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .category-header {
+        width: 100%;
+        padding: 14px 16px;
+        background: none;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--color-text);
+        text-align: left;
+    }
+
+    .category-header:hover {
+        background: var(--color-bg-secondary);
+    }
+
+    .category-count {
+        font-weight: normal;
+        color: var(--color-text-muted);
+        font-size: 13px;
+    }
+
+    .category-arrow {
+        margin-left: auto;
+        transition: transform 0.2s ease;
+    }
+
+    .category-header[aria-expanded="true"] .category-arrow {
+        transform: rotate(180deg);
+    }
+
+    .route-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .route-list.collapsed {
+        display: none;
+    }
+
+    .route-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: stretch;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .route-button {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        min-width: 0;
+        min-height: var(--min-touch-target);
+    }
+
+    .route-button:hover {
+        background: var(--color-bg-secondary);
+    }
+
+    .route-button.selected {
+        background: rgba(0, 75, 135, 0.1);
+    }
+
+    .route-badges {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .route-number {
+        min-width: 36px;
+        padding: 6px 6px;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+        font-size: 13px;
+        text-align: center;
+        cursor: pointer;
+        transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .route-number:hover {
+        opacity: 0.85;
+        transform: scale(1.05);
+    }
+
+    .route-counterpart {
+    }
+
+    .route-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .route-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--color-text);
+    }
+
+    .route-evening {
+        font-size: 11px;
+        color: var(--color-text-muted);
+    }
+
+    .route-interlines {
+        font-size: 11px;
+        color: #0077BE;
+        font-weight: 500;
+    }
+
+    .route-button.interlined {
+        background: rgba(0, 119, 190, 0.08);
+        border-left: 3px solid #0077BE;
+    }
+
+    .route-link {
+        padding: 12px 16px;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        font-size: 13px;
+        font-weight: 500;
+        background: none;
+        border: none;
+        transition: color 0.15s, background 0.15s;
+        min-height: var(--min-touch-target);
+    }
+
+    .route-link:hover {
+        color: var(--color-primary);
+        background: var(--color-bg-secondary);
+    }
+
+    /* Map Legend */
+    .map-legend {
+        position: absolute;
+        bottom: 80px;
+        left: 10px;
+        background: var(--color-bg);
+        padding: 0;
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+        font-size: 14px;
+        z-index: 100;
+        max-width: 220px;
+        overflow: hidden;
+    }
+
+    .legend-title {
+        font-weight: 600;
+        font-size: 14px;
+        background: #1a1a1a;
+        color: #ffffff;
+        padding: 8px 14px;
+        margin: 0;
+    }
+
+    .legend-section {
+        padding: 10px 14px;
+    }
+
+    .legend-divider {
+        border: none;
+        border-top: 1px solid var(--color-border);
+        margin: 0;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .legend-line {
+        width: 24px;
+        height: 4px;
+        border-radius: 2px;
+        flex-shrink: 0;
+        background: #555;
+    }
+
+    .legend-line.dashed {
+        background: repeating-linear-gradient(
+            90deg,
+            #555 0px, #555 5px,
+            transparent 5px, transparent 10px
+        );
+        border-radius: 0;
+    }
+
+    @media (max-width: 767px) {
+        .map-legend {
+            bottom: 70px;
+            font-size: 12px;
+        }
+        .legend-section {
+            padding: 8px 10px;
+        }
+    }
+
+    /* Hub Popups */
+    .mapboxgl-popup-content {
+        padding: 0 !important;
+        border-radius: 8px !important;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+        min-width: 180px;
+    }
+
+    .hub-popup-header {
+        padding: 12px 30px 12px 14px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .hub-popup-icon {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.5);
+        flex-shrink: 0;
+    }
+
+    .hub-popup-name {
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1.3;
+    }
+
+    .hub-popup-category {
+        font-size: 13px;
+        opacity: 0.85;
+        text-transform: capitalize;
+    }
+
+    .hub-popup-body {
+        padding: 10px 14px;
+        background: #ffffff;
+    }
+
+    .hub-popup-label {
+        font-size: 13px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+
+    .hub-popup-routes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .hub-popup-route-badge {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.4;
+        cursor: pointer;
+    }
+
+    .hub-popup-route-badge:hover {
+        opacity: 0.85;
+    }
+
+    .hub-popup-footer {
+        padding: 8px 14px 10px;
+        background: #ffffff;
+        font-size: 13px;
+        color: #888;
+        border-top: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .mapboxgl-popup-close-button {
+        color: #ffffff !important;
+        font-size: 18px;
+        right: 4px !important;
+        top: 4px !important;
+    }
+
+    /* Dark mode overrides */
+    .dark-mode .mapboxgl-popup-content {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+    }
+
+    .dark-mode .hub-popup-body {
+        background: #1e1e1e;
+    }
+
+    .dark-mode .hub-popup-label {
+        color: #aaa;
+    }
+
+    .dark-mode .hub-popup-footer {
+        background: #1e1e1e;
+        color: #aaa;
+        border-top-color: #333;
+    }
+
+    .dark-mode .route-button.selected {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .dark-mode .search-input {
+        background: var(--color-bg-secondary);
+        border-color: var(--color-border);
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+    </style>
+</head>
+<body>
+
+<!-- Skip Links -->
+<a href="#system-map" class="skip-link">Skip to map</a>
+<a href="#route-panel" class="skip-link">Skip to route list</a>
+
+<!-- Accessibility Announcements -->
+<div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+<div class="map-app" role="application" aria-label="Transit System Map">
+
+    <!-- Map Container -->
+    <main class="map-container" role="main">
+        <div id="system-map" aria-label="Interactive transit map"></div>
+
+        <!-- Map Controls -->
+        <div class="map-controls" role="toolbar" aria-label="Map controls">
+            <button class="control-btn" onclick="toggleDarkMode()" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+            <button class="control-btn" onclick="resetMap()" aria-label="Reset map view" title="Reset view">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Map Legend -->
+        <div class="map-legend">
+            <div class="legend-title">Legend</div>
+            <div class="legend-section">
+                <div class="legend-item">
+                    <div class="legend-line"></div>
+                    <span>Route</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line dashed"></div>
+                    <span>Interlined Route</span>
+                </div>
+            </div>
+            <hr class="legend-divider">
+            <div class="legend-section">
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #0CAB9B;"></div>
+                <span>Transit Hub</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #CC0000;"></div>
+                <span>University</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #0077BE;"></div>
+                <span>College</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #E74C3C;"></div>
+                <span>Hospital</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #9B59B6;"></div>
+                <span>Shopping</span>
+            </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Route Panel -->
+    <aside id="route-panel" class="route-panel" role="complementary" aria-label="Route selection panel">
+
+        <!-- Mobile Handle -->
+        <div class="sheet-handle" onclick="toggleBottomSheet()" aria-label="Toggle route panel">
+            <div class="handle-bar"></div>
+        </div>
+
+        <!-- Panel Header -->
+        <div class="panel-header" onclick="toggleBottomSheet()">
+            <div class="default-header">
+                <h2>Routes</h2>
+            </div>
+            <div class="selected-route-header">
+                <span class="route-badge"></span>
+                <span class="route-name"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <button class="show-all-btn" onclick="event.stopPropagation(); showAllRoutes();">Show All</button>
+                <button class="help-toggle" onclick="event.stopPropagation(); toggleHelp();" aria-label="Toggle help" title="How to use this map">?</button>
+            </div>
+            <button class="panel-close" onclick="event.stopPropagation(); closeBottomSheet()" aria-label="Close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Help Section -->
+        <div class="help-section" id="helpSection">
+            <div class="help-title">How to Use This Map</div>
+            <ul>
+                <li><strong>Search</strong> routes by name or number using the search bar.</li>
+                <li><strong>Tap a route</strong> to highlight it on the map. Tap the <strong>map background</strong> to show all routes again.</li>
+                <li>Routes with <strong>two badges</strong> (103/203) have day and night/weekend options. Click each badge to see the exact route, sometimes they are different.</li>
+                <li><strong>Dashed lines</strong> show interlined routes that connect end-to-end with the selected route.</li>
+                <li>Tap <strong>coloured dots</strong> on the map to see hub details and the routes serving them.</li>
+                <li>Tap <strong>Details &rarr;</strong> to visit a route&rsquo;s full schedule page.</li>
+                <li>Use the <strong>moon icon</strong> for dark mode and the <strong>reset icon</strong> to reset the map view.</li>
+                <li><strong>On mobile:</strong> swipe up on the bottom panel to browse routes.</li>
+            </ul>
+        </div>
+
+        <!-- Effective Dates -->
+        
+
+        <!-- Search -->
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search routes..."
+                   oninput="filterRoutes(this.value)" aria-label="Search routes">
+        </div>
+
+        <!-- Route Categories -->
+        <div class="panel-content" role="region" aria-label="Route categories">
+            <div class="categories-container">
+                
+                <div class="route-category" data-category="niagara_falls">
+                    <button class="category-header"
+                            onclick="toggleCategory('niagara_falls')"
+                            aria-expanded="true"
+                            aria-controls="routes-niagara_falls">
+                        <span class="category-name">Niagara Falls</span>
+                        <span class="category-count">(16 routes)</span>
+                        <span class="category-arrow" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M5.29 7.29a1 1 0 011.42 0L10 10.59l3.29-3.3a1 1 0 111.42 1.42l-4 4a1 1 0 01-1.42 0l-4-4a1 1 0 010-1.42z"/>
+                            </svg>
+                        </span>
+                    </button>
+                    <ul class="route-list" id="routes-niagara_falls" role="list">
+            
+
+                    <li class="route-item" data-route-id="101" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('101')"
+                                aria-label="View Dunn St. on map"
+                                data-color="#e5a000">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #e5a000; color: white;" data-route="101" onclick="event.stopPropagation(); selectRoute('101')" title="Weekday">101</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Dunn&nbsp;St.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/101"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Dunn St. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="102" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('102')"
+                                aria-label="View Hospital on map"
+                                data-color="#7060a8">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #7060a8; color: white;" data-route="102" onclick="event.stopPropagation(); selectRoute('102')" title="Weekday">102</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Hospital</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/102"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Hospital details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="103" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('103')"
+                                aria-label="View Drummond Rd. - Oldfield Rd. on map"
+                                data-color="#e87aab">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #e87aab; color: white;" data-route="103" onclick="event.stopPropagation(); selectRoute('103')" title="Weekday">103</span><span class="route-number route-counterpart" style="background-color: #e87aab; color: white;" data-route="203" onclick="event.stopPropagation(); selectRoute('203')" title="Eve/Wknd">203</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Drummond&nbsp;Rd. - Oldfield&nbsp;Rd.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/103"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Drummond Rd. - Oldfield Rd. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="104" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('104')"
+                                aria-label="View Victoria Av. on map"
+                                data-color="#50b0d8">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #50b0d8; color: white;" data-route="104" onclick="event.stopPropagation(); selectRoute('104')" title="Weekday">104</span><span class="route-number route-counterpart" style="background-color: #50b0d8; color: white;" data-route="204" onclick="event.stopPropagation(); selectRoute('204')" title="Eve/Wknd">204</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Victoria&nbsp;Av.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/104"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Victoria Av. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="105" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('105')"
+                                aria-label="View Kalar Rd. on map"
+                                data-color="#d86040">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #d86040; color: white;" data-route="105" onclick="event.stopPropagation(); selectRoute('105')" title="Weekday">105</span><span class="route-number route-counterpart" style="background-color: #d86040; color: white;" data-route="205" onclick="event.stopPropagation(); selectRoute('205')" title="Eve/Wknd">205</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Kalar&nbsp;Rd.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/105"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Kalar Rd. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="106" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('106')"
+                                aria-label="View Stanley Av.-Ind. Park-Chippawa on map"
+                                data-color="#e8d800">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #e8d800; color: black;" data-route="106" onclick="event.stopPropagation(); selectRoute('106')" title="Weekday">106</span><span class="route-number route-counterpart" style="background-color: #e8d800; color: black;" data-route="206" onclick="event.stopPropagation(); selectRoute('206')" title="Eve/Wknd">206</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Stanley Av.-Ind. Park-Chippawa</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/106"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Stanley Av.-Ind. Park-Chippawa details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="107" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('107')"
+                                aria-label="View Town & Country - Church's Ln on map"
+                                data-color="#b08870">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #b08870; color: white;" data-route="107" onclick="event.stopPropagation(); selectRoute('107')" title="Weekday">107</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Town&nbsp;&&nbsp;Country - Church's&nbsp;Ln</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/107"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Town & Country - Church's Ln details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="108" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('108')"
+                                aria-label="View Thorold Stone Rd. - Dorchester on map"
+                                data-color="#038a48">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #038a48; color: white;" data-route="108" onclick="event.stopPropagation(); selectRoute('108')" title="Weekday">108</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Thorold Stone&nbsp;Rd. - Dorchester</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/108"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Thorold Stone Rd. - Dorchester details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="109" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('109')"
+                                aria-label="View Thorold Stone Rd. - Mt. Carmel on map"
+                                data-color="#9cb800">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #9cb800; color: white;" data-route="109" onclick="event.stopPropagation(); selectRoute('109')" title="Weekday">109</span><span class="route-number route-counterpart" style="background-color: #9cb800; color: white;" data-route="209" onclick="event.stopPropagation(); selectRoute('209')" title="Eve/Wknd">209</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Thorold Stone&nbsp;Rd. - Mt.&nbsp;Carmel</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/109"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Thorold Stone Rd. - Mt. Carmel details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="110" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('110')"
+                                aria-label="View Drummond Rd. on map"
+                                data-color="#7090c8">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #7090c8; color: white;" data-route="110" onclick="event.stopPropagation(); selectRoute('110')" title="Weekday">110</span><span class="route-number route-counterpart" style="background-color: #7090c8; color: white;" data-route="210" onclick="event.stopPropagation(); selectRoute('210')" title="Eve/Wknd">210</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Drummond&nbsp;Rd.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/110"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Drummond Rd. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="111" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('111')"
+                                aria-label="View Dorchester Rd. on map"
+                                data-color="#e89070">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #e89070; color: white;" data-route="111" onclick="event.stopPropagation(); selectRoute('111')" title="Weekday">111</span><span class="route-number route-counterpart" style="background-color: #e89070; color: white;" data-route="211" onclick="event.stopPropagation(); selectRoute('211')" title="Eve/Wknd">211</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Dorchester&nbsp;Rd.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/111"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Dorchester Rd. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="112" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('112')"
+                                aria-label="View McLeod Rd. - Chippawa on map"
+                                data-color="#c890b8">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #c890b8; color: white;" data-route="112" onclick="event.stopPropagation(); selectRoute('112')" title="Weekday">112</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">McLeod&nbsp;Rd. - Chippawa</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/112"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View McLeod Rd. - Chippawa details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="113" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('113')"
+                                aria-label="View Montrose Rd. - Heartland Forest on map"
+                                data-color="#987058">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #987058; color: white;" data-route="113" onclick="event.stopPropagation(); selectRoute('113')" title="Weekday">113</span><span class="route-number route-counterpart" style="background-color: #987058; color: white;" data-route="213" onclick="event.stopPropagation(); selectRoute('213')" title="Eve/Wknd">213</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Montrose&nbsp;Rd. - Heartland Forest</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/113"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Montrose Rd. - Heartland Forest details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="114" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('114')"
+                                aria-label="View Thorold Stone Rd -Town & Country on map"
+                                data-color="#c070a0">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #c070a0; color: white;" data-route="114" onclick="event.stopPropagation(); selectRoute('114')" title="Weekday">114</span><span class="route-number route-counterpart" style="background-color: #c070a0; color: white;" data-route="214" onclick="event.stopPropagation(); selectRoute('214')" title="Eve/Wknd">214</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Thorold Stone&nbsp;Rd&nbsp;-Town&nbsp;&&nbsp;Country</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/114"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Thorold Stone Rd -Town & Country details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="115" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('115')"
+                                aria-label="View Morrison St. - Downtown on map"
+                                data-color="#000000">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #000000; color: white;" data-route="115" onclick="event.stopPropagation(); selectRoute('115')" title="Weekday">115</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Morrison&nbsp;St. - Downtown</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/115"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Morrison St. - Downtown details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+
+                    <li class="route-item" data-route-id="116" data-service-type="niagara_falls">
+                        <button class="route-button"
+                                onclick="selectRoute('116')"
+                                aria-label="View Lundy's Ln. on map"
+                                data-color="#dd0000">
+                            <span class="route-badges">
+                                <span class="route-number" style="background-color: #dd0000; color: white;" data-route="116" onclick="event.stopPropagation(); selectRoute('116')" title="Weekday">116</span><span class="route-number route-counterpart" style="background-color: #dd0000; color: white;" data-route="216" onclick="event.stopPropagation(); selectRoute('216')" title="Eve/Wknd">216</span>
+                            </span>
+                            <span class="route-details">
+                                <span class="route-name">Lundy's&nbsp;Ln.</span>
+                                
+                            </span>
+                        </button>
+                        <a href="https://nrtransit.ca/routes/116"
+                           class="route-link"
+                           target="_top"
+                           aria-label="View Lundy's Ln. details on website">Details<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </a>
+                    </li>
+                
+</ul></div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    // Route data
+    const routesData = [{"id":"101","name":"Dunn St.","short_name":"101","color":"#e5a000","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0925,43.0887],[-79.0915,43.0864],[-79.0903,43.0852],[-79.0866,43.0838],[-79.086,43.0834],[-79.0845,43.0835],[-79.0841,43.0792],[-79.0853,43.0793],[-79.0918,43.0788],[-79.097,43.0788],[-79.0979,43.0786],[-79.1029,43.0785],[-79.1101,43.0778],[-79.1098,43.0705],[-79.1174,43.0703],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.118,43.0659],[-79.1175,43.0666],[-79.1174,43.0704],[-79.126,43.0703],[-79.126,43.0714],[-79.1248,43.0713],[-79.1245,43.0724],[-79.1256,43.0727],[-79.126,43.0718],[-79.1262,43.0707],[-79.1262,43.0694],[-79.126,43.0688],[-79.1258,43.0685],[-79.1232,43.068],[-79.1227,43.0675],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1287,43.0643],[-79.1286,43.0699],[-79.1283,43.0701],[-79.126,43.0701],[-79.126,43.0714],[-79.1249,43.0714],[-79.1245,43.0725],[-79.1256,43.0727],[-79.126,43.072],[-79.1262,43.0702],[-79.1226,43.0701],[-79.1174,43.0703],[-79.1176,43.069],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1183,43.0658],[-79.1176,43.0663],[-79.1174,43.0703],[-79.1118,43.0704],[-79.1098,43.0706],[-79.1101,43.0778],[-79.1036,43.0784],[-79.084,43.0792],[-79.0843,43.0835],[-79.086,43.0834],[-79.0866,43.0838],[-79.0903,43.0852],[-79.0915,43.0864],[-79.0925,43.0887]]],"simplified_patterns":[[[-79.0925,43.0887],[-79.0903,43.0852],[-79.086,43.0834],[-79.0845,43.0835],[-79.0841,43.0792],[-79.1101,43.0778],[-79.1098,43.0705],[-79.1174,43.0703],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.118,43.0659],[-79.1174,43.0704],[-79.126,43.0703],[-79.126,43.0714],[-79.1248,43.0713],[-79.1245,43.0724],[-79.1256,43.0727],[-79.126,43.0688],[-79.1227,43.0675],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1287,43.0643],[-79.1286,43.0699],[-79.126,43.0701],[-79.126,43.0714],[-79.1249,43.0714],[-79.1245,43.0725],[-79.1256,43.0727],[-79.1262,43.0702],[-79.1174,43.0703],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1183,43.0658],[-79.1176,43.0663],[-79.1174,43.0703],[-79.1098,43.0706],[-79.1101,43.0778],[-79.084,43.0792],[-79.0843,43.0835],[-79.086,43.0834],[-79.0903,43.0852],[-79.0925,43.0887]]],"hide_from_list":false},{"id":"102","name":"Hospital","short_name":"102","color":"#7060a8","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1146,43.1041],[-79.0998,43.1044],[-79.098,43.1039],[-79.0966,43.1039],[-79.0944,43.1043],[-79.0932,43.1043],[-79.0919,43.1022],[-79.0908,43.0982],[-79.0908,43.0967],[-79.0911,43.0955],[-79.0919,43.0933],[-79.093,43.0913],[-79.0929,43.0901],[-79.0925,43.0887]],[[-79.0732,43.107],[-79.0733,43.1084],[-79.0732,43.1087],[-79.0727,43.1088],[-79.0722,43.1086],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0635,43.1078],[-79.0635,43.1076],[-79.073,43.1077],[-79.0733,43.1076],[-79.0733,43.1054],[-79.074,43.1047],[-79.0786,43.1045],[-79.0784,43.0986],[-79.0855,43.0984],[-79.0858,43.1044],[-79.0938,43.1044],[-79.0966,43.1039],[-79.098,43.1039],[-79.0998,43.1044],[-79.1019,43.1045],[-79.1032,43.1043],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]]],"simplified_patterns":[[[-79.1146,43.1041],[-79.0932,43.1043],[-79.0908,43.0982],[-79.0911,43.0955],[-79.093,43.0913],[-79.0925,43.0887]],[[-79.0732,43.107],[-79.0727,43.1088],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0635,43.1078],[-79.073,43.1077],[-79.074,43.1047],[-79.0786,43.1045],[-79.0784,43.0986],[-79.0855,43.0984],[-79.0858,43.1044],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]]],"hide_from_list":false},{"id":"103","name":"Drummond Rd. - Oldfield Rd.","short_name":"103","color":"#e87aab","text_color":"white","category":"niagara_falls","counterpart":"203","interlines":[],"patterns":[[[-79.1248,43.0643],[-79.1287,43.0643],[-79.1287,43.0698],[-79.1283,43.0701],[-79.1174,43.0703],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1185,43.0658],[-79.1178,43.066],[-79.1176,43.0663],[-79.1173,43.0703],[-79.1099,43.0705],[-79.1098,43.0673],[-79.114,43.0674],[-79.1139,43.065],[-79.1135,43.0643],[-79.1125,43.0641],[-79.1111,43.0647],[-79.1097,43.0647],[-79.1096,43.0632],[-79.097,43.0634],[-79.0968,43.0675],[-79.0971,43.0719],[-79.0975,43.0858],[-79.0977,43.0867],[-79.0978,43.0894],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0914,43.0863],[-79.0976,43.0859],[-79.0969,43.0685],[-79.097,43.0634],[-79.1095,43.0632],[-79.1097,43.0646],[-79.1097,43.0671],[-79.1098,43.0673],[-79.111,43.0674],[-79.114,43.0674],[-79.1138,43.0646],[-79.1135,43.0643],[-79.1125,43.0641],[-79.1111,43.0647],[-79.1097,43.0647],[-79.1098,43.0705],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1186,43.0658],[-79.1179,43.066],[-79.1176,43.0665],[-79.1173,43.0703],[-79.1262,43.0703],[-79.1262,43.0691],[-79.1259,43.0686],[-79.1256,43.0684],[-79.1232,43.068],[-79.1227,43.0674],[-79.1231,43.0656],[-79.1231,43.0643],[-79.1248,43.0643]]],"simplified_patterns":[[[-79.1248,43.0643],[-79.1287,43.0643],[-79.1283,43.0701],[-79.1174,43.0703],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1185,43.0658],[-79.1176,43.0663],[-79.1173,43.0703],[-79.1099,43.0705],[-79.1098,43.0673],[-79.114,43.0674],[-79.1135,43.0643],[-79.1097,43.0647],[-79.1096,43.0632],[-79.097,43.0634],[-79.0978,43.0894],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0914,43.0863],[-79.0976,43.0859],[-79.097,43.0634],[-79.1095,43.0632],[-79.1097,43.0671],[-79.111,43.0674],[-79.114,43.0674],[-79.1135,43.0643],[-79.1097,43.0647],[-79.1098,43.0705],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1186,43.0658],[-79.1176,43.0665],[-79.1173,43.0703],[-79.1262,43.0703],[-79.1259,43.0686],[-79.1227,43.0674],[-79.1231,43.0643],[-79.1248,43.0643]]],"hide_from_list":false},{"id":"104","name":"Victoria Av.","short_name":"104","color":"#50b0d8","text_color":"white","category":"niagara_falls","counterpart":"204","interlines":[],"patterns":[[[-79.0705,43.1056],[-79.0652,43.1056],[-79.0652,43.1066],[-79.0643,43.1067],[-79.0611,43.1067],[-79.0607,43.1065],[-79.0598,43.1074],[-79.0597,43.1082],[-79.06,43.1089],[-79.0619,43.1086],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0635,43.1078],[-79.0635,43.1076],[-79.0733,43.1076],[-79.0728,43.0943],[-79.0737,43.0935],[-79.0802,43.0896],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.0802,43.0896],[-79.0731,43.0939],[-79.0728,43.0943],[-79.0727,43.095],[-79.0729,43.0961],[-79.0728,43.0974],[-79.073,43.0987],[-79.0732,43.1054],[-79.0729,43.1056],[-79.0705,43.1056]]],"simplified_patterns":[[[-79.0705,43.1056],[-79.0652,43.1056],[-79.0652,43.1066],[-79.0643,43.1067],[-79.0607,43.1065],[-79.0597,43.1082],[-79.06,43.1089],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0635,43.1078],[-79.0733,43.1076],[-79.0728,43.0943],[-79.0737,43.0935],[-79.0802,43.0896],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.0802,43.0896],[-79.0731,43.0939],[-79.0732,43.1054],[-79.0705,43.1056]]],"hide_from_list":false},{"id":"105","name":"Kalar Rd.","short_name":"105","color":"#d86040","text_color":"white","category":"niagara_falls","counterpart":"205","interlines":[],"patterns":[[[-79.136,43.0885],[-79.1368,43.1004],[-79.1328,43.1005],[-79.1318,43.1009],[-79.1314,43.1013],[-79.1312,43.1019],[-79.1313,43.1042],[-79.1337,43.1043],[-79.1365,43.1041],[-79.1365,43.1043],[-79.1365,43.1041],[-79.1369,43.1041],[-79.1375,43.114],[-79.1373,43.1142],[-79.1356,43.1143],[-79.1246,43.1146],[-79.1247,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1258,43.1147],[-79.1268,43.1145],[-79.1375,43.1143],[-79.1375,43.1138],[-79.1376,43.1139],[-79.1374,43.1136],[-79.1369,43.1041],[-79.1313,43.1042],[-79.1312,43.1019],[-79.1314,43.1013],[-79.1318,43.1009],[-79.1319,43.101],[-79.1318,43.1009],[-79.1321,43.1007],[-79.1328,43.1005],[-79.1368,43.1004],[-79.1363,43.0939],[-79.1364,43.0927],[-79.1362,43.0919],[-79.1362,43.0877]],[[-79.1362,43.0877],[-79.136,43.0874],[-79.1358,43.077],[-79.1356,43.0758],[-79.1357,43.075],[-79.1355,43.0739],[-79.1354,43.0699],[-79.1483,43.0696],[-79.1482,43.0586],[-79.1352,43.0589],[-79.1352,43.065],[-79.1354,43.0658],[-79.1354,43.0699],[-79.1352,43.07],[-79.1262,43.0701],[-79.1262,43.0691],[-79.1259,43.0686],[-79.1256,43.0684],[-79.1232,43.068],[-79.1227,43.0674],[-79.1231,43.0659],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1248,43.0653],[-79.1243,43.066],[-79.123,43.0658],[-79.1232,43.0641],[-79.1231,43.0592],[-79.1296,43.0592],[-79.1295,43.0591],[-79.13,43.059],[-79.1352,43.0589],[-79.1351,43.0612],[-79.1355,43.0705],[-79.1355,43.0707],[-79.1353,43.0707],[-79.1355,43.0707],[-79.1355,43.0724],[-79.1353,43.0724],[-79.1355,43.0724],[-79.1355,43.0752],[-79.1357,43.0758],[-79.1358,43.078],[-79.1357,43.0804],[-79.1359,43.0818],[-79.1358,43.0835],[-79.136,43.0851],[-79.136,43.0885]]],"simplified_patterns":[[[-79.136,43.0885],[-79.1368,43.1004],[-79.1318,43.1009],[-79.1313,43.1042],[-79.1369,43.1041],[-79.1375,43.114],[-79.1246,43.1146],[-79.1247,43.1166],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1375,43.1143],[-79.1369,43.1041],[-79.1313,43.1042],[-79.1318,43.1009],[-79.1368,43.1004],[-79.1362,43.0877]],[[-79.1362,43.0877],[-79.1354,43.0699],[-79.1483,43.0696],[-79.1482,43.0586],[-79.1352,43.0589],[-79.1352,43.07],[-79.1262,43.0701],[-79.1259,43.0686],[-79.1227,43.0674],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1243,43.066],[-79.123,43.0658],[-79.1231,43.0592],[-79.1352,43.0589],[-79.136,43.0885]]],"hide_from_list":false},{"id":"106","name":"Stanley Av.-Ind. Park-Chippawa","short_name":"106","color":"#e8d800","text_color":"black","category":"niagara_falls","counterpart":"206","interlines":[],"patterns":[[[-79.0531,43.0602],[-79.0517,43.0596],[-79.0508,43.0589],[-79.0595,43.0522],[-79.0591,43.0515],[-79.0582,43.0516],[-79.0576,43.0519],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.0925,43.0887],[-79.0915,43.0864],[-79.0903,43.0852],[-79.0866,43.0838],[-79.086,43.0834],[-79.0845,43.0835],[-79.0842,43.0812],[-79.0841,43.0782],[-79.0839,43.0777],[-79.0839,43.0763],[-79.0836,43.0746],[-79.0835,43.0719],[-79.0838,43.0702],[-79.0847,43.0692],[-79.0817,43.0681],[-79.0817,43.0677],[-79.0833,43.0668],[-79.0837,43.0661],[-79.0838,43.0601],[-79.0834,43.0546],[-79.0884,43.0545],[-79.0882,43.0515],[-79.0832,43.0516],[-79.0837,43.0591],[-79.0837,43.0661],[-79.0833,43.0668],[-79.0817,43.0677],[-79.0814,43.0682],[-79.0799,43.0682],[-79.0774,43.0686],[-79.0765,43.0685],[-79.0757,43.0682],[-79.0743,43.067],[-79.0731,43.0663],[-79.0531,43.0602]],[[-79.0531,43.0602],[-79.0517,43.0596],[-79.0508,43.0589],[-79.0595,43.0522],[-79.0591,43.0515],[-79.0582,43.0516],[-79.0576,43.0519],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0464,43.0551],[-79.0465,43.056],[-79.0525,43.06],[-79.0736,43.0665],[-79.0757,43.0682],[-79.0765,43.0685],[-79.0774,43.0686],[-79.0791,43.0683],[-79.0814,43.0684],[-79.0816,43.0678],[-79.0833,43.0668],[-79.0837,43.0661],[-79.0838,43.0601],[-79.0834,43.0546],[-79.0884,43.0545],[-79.0882,43.0515],[-79.0832,43.0515],[-79.0837,43.0591],[-79.0837,43.0661],[-79.0833,43.0668],[-79.0817,43.0677],[-79.0814,43.0684],[-79.0823,43.0684],[-79.0836,43.0688],[-79.0841,43.0692],[-79.0841,43.0696],[-79.0836,43.0703],[-79.0835,43.0722],[-79.0833,43.0723],[-79.0835,43.0723],[-79.0835,43.0743],[-79.0837,43.0747],[-79.084,43.0779],[-79.0839,43.0785],[-79.0843,43.0835],[-79.086,43.0834],[-79.0866,43.0838],[-79.0903,43.0852],[-79.0915,43.0864],[-79.0925,43.0887]]],"simplified_patterns":[[[-79.0531,43.0602],[-79.0508,43.0589],[-79.0595,43.0522],[-79.0591,43.0515],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.0925,43.0887],[-79.0903,43.0852],[-79.086,43.0834],[-79.0845,43.0835],[-79.0835,43.0719],[-79.0847,43.0692],[-79.0817,43.0681],[-79.0837,43.0661],[-79.0834,43.0546],[-79.0884,43.0545],[-79.0882,43.0515],[-79.0832,43.0516],[-79.0837,43.0661],[-79.0814,43.0682],[-79.0765,43.0685],[-79.0731,43.0663],[-79.0531,43.0602]],[[-79.0531,43.0602],[-79.0508,43.0589],[-79.0595,43.0522],[-79.0591,43.0515],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0464,43.0551],[-79.0465,43.056],[-79.0525,43.06],[-79.0736,43.0665],[-79.0765,43.0685],[-79.0814,43.0684],[-79.0837,43.0661],[-79.0834,43.0546],[-79.0884,43.0545],[-79.0882,43.0515],[-79.0832,43.0515],[-79.0837,43.0661],[-79.0814,43.0684],[-79.0841,43.0692],[-79.0833,43.0723],[-79.0843,43.0835],[-79.086,43.0834],[-79.0903,43.0852],[-79.0925,43.0887]]],"hide_from_list":false},{"id":"107","name":"Town & Country - Church's Ln","short_name":"107","color":"#b08870","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1,43.1207],[-79.0996,43.1207],[-79.0996,43.1199],[-79.0948,43.1201],[-79.0952,43.1261],[-79.0927,43.1261],[-79.0921,43.1267],[-79.0921,43.1272],[-79.0919,43.1274],[-79.0904,43.1279],[-79.0898,43.1286],[-79.0884,43.1292],[-79.0872,43.1292]],[[-79.0925,43.0887],[-79.093,43.0905],[-79.093,43.0913],[-79.0919,43.0933],[-79.0917,43.0941],[-79.0915,43.094],[-79.0917,43.0941],[-79.0907,43.097],[-79.0908,43.098],[-79.0918,43.0978],[-79.0979,43.0978],[-79.0982,43.0981],[-79.0986,43.1045],[-79.0985,43.1079],[-79.0987,43.1098],[-79.0967,43.1099],[-79.0978,43.1124],[-79.0986,43.1146],[-79.0985,43.1147],[-79.0991,43.1156],[-79.0994,43.1168],[-79.0993,43.1188],[-79.0995,43.121],[-79.1003,43.1209],[-79.1,43.1207]],[[-79.1,43.1207],[-79.0996,43.1207],[-79.0995,43.1178],[-79.099,43.1149],[-79.0986,43.1068],[-79.0986,43.103],[-79.0984,43.1025],[-79.0985,43.101],[-79.0983,43.1007],[-79.0981,43.0977],[-79.0918,43.0978],[-79.0908,43.098],[-79.0908,43.0967],[-79.0911,43.0955],[-79.0919,43.0933],[-79.093,43.0913],[-79.0929,43.0901],[-79.0925,43.0887]],[[-79.0872,43.1292],[-79.0869,43.1293],[-79.087,43.1303],[-79.0877,43.1304],[-79.093,43.1303],[-79.0929,43.1304],[-79.098,43.1299],[-79.0996,43.1238],[-79.0996,43.1231],[-79.0998,43.123],[-79.0996,43.1224],[-79.0996,43.121],[-79.1003,43.1209],[-79.1003,43.1207],[-79.1,43.1207]]],"simplified_patterns":[[[-79.1,43.1207],[-79.0996,43.1199],[-79.0948,43.1201],[-79.0952,43.1261],[-79.0927,43.1261],[-79.0898,43.1286],[-79.0872,43.1292]],[[-79.0925,43.0887],[-79.093,43.0913],[-79.0915,43.094],[-79.0908,43.098],[-79.0982,43.0981],[-79.0987,43.1098],[-79.0967,43.1099],[-79.0991,43.1156],[-79.0995,43.121],[-79.1,43.1207]],[[-79.1,43.1207],[-79.099,43.1149],[-79.0981,43.0977],[-79.0908,43.098],[-79.093,43.0913],[-79.0925,43.0887]],[[-79.0872,43.1292],[-79.087,43.1303],[-79.0877,43.1304],[-79.098,43.1299],[-79.1,43.1207]]],"hide_from_list":false},{"id":"108","name":"Thorold Stone Rd. - Dorchester","short_name":"108","color":"#038a48","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0728,43.1133],[-79.0648,43.1136],[-79.0626,43.1118],[-79.0608,43.1118],[-79.0601,43.1089],[-79.0619,43.1086],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.1,43.1207],[-79.0996,43.1207],[-79.0994,43.1168],[-79.0991,43.1153],[-79.0873,43.1155],[-79.0863,43.1152],[-79.0861,43.1146],[-79.0861,43.1135],[-79.0862,43.1136],[-79.0859,43.1085],[-79.0733,43.1086],[-79.0734,43.1134],[-79.0648,43.1136],[-79.0626,43.1118],[-79.0608,43.1118],[-79.0601,43.1094],[-79.0601,43.1089],[-79.0608,43.1087],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1111,43.1052],[-79.1114,43.1065],[-79.1116,43.1129],[-79.112,43.1165],[-79.1123,43.1225],[-79.1025,43.1228],[-79.1013,43.1227],[-79.1001,43.1228],[-79.0998,43.123],[-79.0996,43.1224],[-79.0996,43.121],[-79.1003,43.1209],[-79.1003,43.1207],[-79.1,43.1207]],[[-79.0635,43.1078],[-79.0635,43.1066],[-79.0611,43.1067],[-79.0607,43.1065],[-79.0598,43.1074],[-79.0597,43.1082],[-79.0601,43.109],[-79.0608,43.1118],[-79.0626,43.1118],[-79.0648,43.1136],[-79.0734,43.1134],[-79.0734,43.1098],[-79.0732,43.1093],[-79.074,43.1086],[-79.0859,43.1085],[-79.0861,43.1114],[-79.0861,43.1145],[-79.0859,43.1154],[-79.0903,43.1155],[-79.0986,43.1153],[-79.0991,43.1158],[-79.0994,43.1168],[-79.0993,43.1188],[-79.0996,43.1208],[-79.0996,43.1224],[-79.0998,43.123],[-79.1001,43.1228],[-79.1012,43.1229],[-79.1026,43.1227],[-79.1112,43.1226],[-79.1123,43.1225],[-79.1121,43.1203],[-79.1122,43.1184],[-79.112,43.1178],[-79.1115,43.1108],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]]],"simplified_patterns":[[[-79.0728,43.1133],[-79.0648,43.1136],[-79.0626,43.1118],[-79.0608,43.1118],[-79.0601,43.1089],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.1,43.1207],[-79.0991,43.1153],[-79.0863,43.1152],[-79.0859,43.1085],[-79.0733,43.1086],[-79.0734,43.1134],[-79.0648,43.1136],[-79.0626,43.1118],[-79.0608,43.1118],[-79.0601,43.1094],[-79.0608,43.1087],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1123,43.1225],[-79.0998,43.123],[-79.1,43.1207]],[[-79.0635,43.1078],[-79.0635,43.1066],[-79.0607,43.1065],[-79.0597,43.1082],[-79.0608,43.1118],[-79.0626,43.1118],[-79.0648,43.1136],[-79.0734,43.1134],[-79.0732,43.1093],[-79.074,43.1086],[-79.0859,43.1085],[-79.0859,43.1154],[-79.0986,43.1153],[-79.0994,43.1168],[-79.0998,43.123],[-79.1112,43.1226],[-79.1123,43.1225],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]]],"hide_from_list":false},{"id":"109","name":"Thorold Stone Rd. - Mt. Carmel","short_name":"109","color":"#9cb800","text_color":"white","category":"niagara_falls","counterpart":"209","interlines":[],"patterns":[[[-79.1248,43.1199],[-79.125,43.1199],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1178],[-79.1249,43.1178],[-79.1248,43.1184],[-79.1251,43.1216],[-79.1229,43.1217],[-79.1228,43.1201],[-79.1244,43.1198],[-79.1248,43.1199]],[[-79.1247,43.1161],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1111,43.1052],[-79.1114,43.1065],[-79.1118,43.115],[-79.1168,43.115],[-79.1246,43.1146],[-79.1247,43.1161]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1118,43.115],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]]],"simplified_patterns":[[[-79.1248,43.1199],[-79.1248,43.1166],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1178],[-79.1249,43.1178],[-79.1251,43.1216],[-79.1229,43.1217],[-79.1228,43.1201],[-79.1248,43.1199]],[[-79.1247,43.1161],[-79.1236,43.1169]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1118,43.115],[-79.1246,43.1146],[-79.1247,43.1161]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1118,43.115],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]]],"hide_from_list":false},{"id":"110","name":"Drummond Rd.","short_name":"110","color":"#7090c8","text_color":"white","category":"niagara_falls","counterpart":"210","interlines":[],"patterns":[[[-79.0925,43.0887],[-79.0914,43.0863],[-79.0976,43.0859],[-79.0978,43.0884],[-79.0978,43.0937],[-79.0983,43.0993],[-79.0985,43.1041],[-79.0998,43.1044],[-79.1019,43.1045],[-79.1032,43.1043],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.103,43.1044],[-79.0998,43.1044],[-79.0985,43.1041],[-79.0985,43.101],[-79.0983,43.1008],[-79.0979,43.0951],[-79.098,43.0946],[-79.0979,43.0947],[-79.0978,43.0937],[-79.0979,43.0885],[-79.0977,43.0882],[-79.0976,43.0859],[-79.0914,43.0863],[-79.0925,43.0887]]],"simplified_patterns":[[[-79.0925,43.0887],[-79.0914,43.0863],[-79.0976,43.0859],[-79.0985,43.1041],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.0985,43.1041],[-79.0976,43.0859],[-79.0914,43.0863],[-79.0925,43.0887]]],"hide_from_list":false},{"id":"111","name":"Dorchester Rd.","short_name":"111","color":"#e89070","text_color":"white","category":"niagara_falls","counterpart":"211","interlines":[],"patterns":[[[-79.1248,43.0643],[-79.1287,43.0642],[-79.1287,43.0695],[-79.1285,43.07],[-79.1098,43.0705],[-79.11,43.0735],[-79.1099,43.0745],[-79.1101,43.0757],[-79.11,43.0777],[-79.1102,43.0787],[-79.1101,43.0805],[-79.1102,43.0804],[-79.1103,43.0817],[-79.1103,43.0869],[-79.1105,43.087],[-79.1106,43.0884],[-79.1105,43.0891],[-79.1108,43.0936],[-79.1106,43.094],[-79.1112,43.1012],[-79.1112,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.1113,43.1042],[-79.1113,43.0997],[-79.111,43.0976],[-79.1109,43.0943],[-79.1107,43.0935],[-79.1098,43.0705],[-79.1262,43.0703],[-79.1262,43.0691],[-79.1259,43.0686],[-79.1256,43.0684],[-79.1232,43.068],[-79.1227,43.0674],[-79.1231,43.0659],[-79.1231,43.0643],[-79.1248,43.0643]]],"simplified_patterns":[[[-79.1248,43.0643],[-79.1287,43.0642],[-79.1285,43.07],[-79.1098,43.0705],[-79.1112,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.1113,43.1042],[-79.1098,43.0705],[-79.1262,43.0703],[-79.1259,43.0686],[-79.1227,43.0674],[-79.1231,43.0643],[-79.1248,43.0643]]],"hide_from_list":false},{"id":"112","name":"McLeod Rd. - Chippawa","short_name":"112","color":"#c890b8","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0464,43.0523],[-79.0462,43.0491],[-79.059,43.0489],[-79.0591,43.0515],[-79.0582,43.0516],[-79.0576,43.0519],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.0464,43.0523],[-79.0462,43.0491],[-79.059,43.0489],[-79.0591,43.0515],[-79.0582,43.0516],[-79.0576,43.0519],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.1248,43.0643],[-79.1287,43.0642],[-79.1287,43.0695],[-79.1285,43.07],[-79.1174,43.0703],[-79.1176,43.0666],[-79.1189,43.0668],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1182,43.0658],[-79.1176,43.0662],[-79.1174,43.0703],[-79.1053,43.0707],[-79.1037,43.0706],[-79.1013,43.0708],[-79.0991,43.0707],[-79.0928,43.071],[-79.0888,43.071],[-79.0883,43.0708],[-79.0881,43.0711],[-79.0883,43.0712],[-79.0884,43.0724],[-79.0895,43.0771],[-79.0896,43.079],[-79.0841,43.0792],[-79.0836,43.0746],[-79.0837,43.0741],[-79.0835,43.0734],[-79.0835,43.0719],[-79.0838,43.0702],[-79.0847,43.0692],[-79.0828,43.0684],[-79.0816,43.0682],[-79.0799,43.0682],[-79.0774,43.0686],[-79.0765,43.0685],[-79.0757,43.0682],[-79.0736,43.0665],[-79.0724,43.0662],[-79.0725,43.0661],[-79.0724,43.0662],[-79.0525,43.06],[-79.0465,43.056],[-79.0463,43.0538],[-79.0464,43.0523]],[[-79.0465,43.0551],[-79.0464,43.0558],[-79.0469,43.0563],[-79.0507,43.0589],[-79.0508,43.0588],[-79.0517,43.0596],[-79.0531,43.0602],[-79.0683,43.0648],[-79.072,43.0661],[-79.0734,43.0664],[-79.0742,43.0669],[-79.0753,43.068],[-79.0765,43.0685],[-79.0775,43.0686],[-79.0795,43.0683],[-79.082,43.0684],[-79.0839,43.069],[-79.0841,43.0692],[-79.0841,43.0696],[-79.0835,43.0705],[-79.0835,43.0723],[-79.0833,43.0723],[-79.0835,43.0723],[-79.0834,43.073],[-79.0839,43.0793],[-79.0898,43.079],[-79.0896,43.0774],[-79.0885,43.0727],[-79.0887,43.0726],[-79.0885,43.0726],[-79.0884,43.0723],[-79.0883,43.0712],[-79.0881,43.0711],[-79.0882,43.0709],[-79.0892,43.0711],[-79.0912,43.0711],[-79.0936,43.0709],[-79.0997,43.0709],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1186,43.0658],[-79.1179,43.066],[-79.1176,43.0665],[-79.1173,43.0703],[-79.1262,43.0703],[-79.1261,43.0688],[-79.1256,43.0684],[-79.1235,43.0681],[-79.1229,43.0677],[-79.1227,43.0671],[-79.1231,43.0656],[-79.1232,43.0643],[-79.1248,43.0643]]],"simplified_patterns":[[[-79.0464,43.0523],[-79.0462,43.0491],[-79.059,43.0489],[-79.0591,43.0515],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.0464,43.0523],[-79.0462,43.0491],[-79.059,43.0489],[-79.0591,43.0515],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.1248,43.0643],[-79.1287,43.0642],[-79.1285,43.07],[-79.1174,43.0703],[-79.1176,43.0666],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1182,43.0658],[-79.1176,43.0662],[-79.1174,43.0703],[-79.0883,43.0708],[-79.0896,43.079],[-79.0841,43.0792],[-79.0835,43.0719],[-79.0847,43.0692],[-79.0816,43.0682],[-79.0765,43.0685],[-79.0725,43.0661],[-79.0525,43.06],[-79.0465,43.056],[-79.0464,43.0523]],[[-79.0465,43.0551],[-79.0469,43.0563],[-79.0531,43.0602],[-79.0734,43.0664],[-79.0765,43.0685],[-79.0839,43.069],[-79.0833,43.0723],[-79.0839,43.0793],[-79.0898,43.079],[-79.0882,43.0709],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1186,43.0658],[-79.1176,43.0665],[-79.1173,43.0703],[-79.1262,43.0703],[-79.1261,43.0688],[-79.1235,43.0681],[-79.1227,43.0671],[-79.1232,43.0643],[-79.1248,43.0643]]],"hide_from_list":false},{"id":"113","name":"Montrose Rd. - Heartland Forest","short_name":"113","color":"#987058","text_color":"white","category":"niagara_falls","counterpart":"213","interlines":[],"patterns":[[[-79.132,43.0556],[-79.1319,43.0546],[-79.1289,43.0546],[-79.1268,43.0539],[-79.123,43.0539],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1248,43.0653],[-79.1243,43.066],[-79.123,43.0658],[-79.1232,43.0641],[-79.1231,43.0592],[-79.1296,43.0592],[-79.1295,43.0591],[-79.13,43.059],[-79.132,43.059],[-79.132,43.0556]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1248,43.1178],[-79.125,43.1216],[-79.1228,43.1216],[-79.1229,43.1201],[-79.1248,43.1199]],[[-79.1248,43.0643],[-79.1248,43.0653],[-79.1243,43.066],[-79.123,43.0658],[-79.1232,43.0635],[-79.1229,43.0539],[-79.1268,43.0539],[-79.1289,43.0546],[-79.1319,43.0546],[-79.132,43.059],[-79.1482,43.0586],[-79.1481,43.064],[-79.1482,43.0639],[-79.1483,43.0692],[-79.1481,43.0692],[-79.1483,43.0692],[-79.1483,43.0696],[-79.1261,43.0701],[-79.126,43.0714],[-79.1248,43.0713],[-79.1248,43.0718],[-79.1245,43.0725],[-79.1255,43.0727],[-79.1247,43.0747],[-79.1231,43.0768],[-79.1228,43.0779],[-79.123,43.0786],[-79.1232,43.0841],[-79.1231,43.088],[-79.1235,43.0915],[-79.1237,43.0973],[-79.1239,43.0978],[-79.1245,43.111],[-79.1244,43.1121],[-79.1248,43.1164],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1243,43.1092],[-79.1239,43.0967],[-79.1236,43.0948],[-79.1235,43.0911],[-79.1233,43.0901],[-79.1234,43.089],[-79.1232,43.0882],[-79.1233,43.0861],[-79.1229,43.0774],[-79.1235,43.0762],[-79.1247,43.0748],[-79.1256,43.0728],[-79.126,43.0718],[-79.1262,43.0694],[-79.126,43.0688],[-79.1256,43.0686],[-79.1233,43.0681],[-79.1228,43.0677],[-79.1228,43.0671],[-79.1231,43.0656],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.1199],[-79.125,43.1199],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]]],"simplified_patterns":[[[-79.132,43.0556],[-79.1319,43.0546],[-79.123,43.0539],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1243,43.066],[-79.123,43.0658],[-79.1231,43.0592],[-79.132,43.059],[-79.132,43.0556]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1248,43.1178],[-79.125,43.1216],[-79.1228,43.1216],[-79.1229,43.1201],[-79.1248,43.1199]],[[-79.1248,43.0643],[-79.1243,43.066],[-79.123,43.0658],[-79.1229,43.0539],[-79.1319,43.0546],[-79.132,43.059],[-79.1482,43.0586],[-79.1483,43.0696],[-79.1261,43.0701],[-79.126,43.0714],[-79.1248,43.0713],[-79.1245,43.0725],[-79.1255,43.0727],[-79.1228,43.0779],[-79.1248,43.1164],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1229,43.0774],[-79.1256,43.0728],[-79.1262,43.0694],[-79.1233,43.0681],[-79.1228,43.0671],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.1199],[-79.1248,43.1166],[-79.1236,43.1169]]],"hide_from_list":false},{"id":"114","name":"Thorold Stone Rd -Town & Country","short_name":"114","color":"#c070a0","text_color":"white","category":"niagara_falls","counterpart":"214","interlines":[],"patterns":[[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1111,43.1052],[-79.1114,43.1065],[-79.1118,43.115],[-79.0989,43.1153],[-79.0994,43.1168],[-79.0993,43.1188]],[[-79.0993,43.1188],[-79.0996,43.1208],[-79.0996,43.1224],[-79.1,43.1241],[-79.1,43.1301],[-79.1035,43.1302],[-79.1127,43.13],[-79.1127,43.1295],[-79.1151,43.1294],[-79.1162,43.129],[-79.1165,43.1287],[-79.1186,43.128],[-79.1191,43.1274],[-79.119,43.1251],[-79.1188,43.1248],[-79.1174,43.1242],[-79.1123,43.1244],[-79.1123,43.1225],[-79.1025,43.1228],[-79.1013,43.1227],[-79.1001,43.1228],[-79.0998,43.123],[-79.0996,43.1224],[-79.0996,43.121],[-79.1003,43.1209],[-79.1003,43.1207],[-79.0999,43.1207],[-79.0998,43.1205],[-79.0999,43.1197],[-79.0995,43.1198],[-79.0994,43.1168],[-79.0991,43.1153],[-79.1002,43.1154],[-79.1024,43.1152],[-79.1118,43.115],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]]],"simplified_patterns":[[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1118,43.115],[-79.0989,43.1153],[-79.0993,43.1188]],[[-79.0993,43.1188],[-79.1,43.1301],[-79.1127,43.13],[-79.1186,43.128],[-79.1188,43.1248],[-79.1174,43.1242],[-79.1123,43.1244],[-79.1123,43.1225],[-79.0998,43.123],[-79.0996,43.1224],[-79.0996,43.121],[-79.1003,43.1207],[-79.0995,43.1198],[-79.0991,43.1153],[-79.1118,43.115],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]]],"hide_from_list":false},{"id":"115","name":"Morrison St. - Downtown","short_name":"115","color":"#000000","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1146,43.1041],[-79.0998,43.1044],[-79.098,43.1039],[-79.0966,43.1039],[-79.0944,43.1043],[-79.0858,43.1044],[-79.0855,43.0984],[-79.0784,43.0986],[-79.0786,43.1045],[-79.074,43.1046],[-79.0732,43.1054],[-79.0732,43.107]],[[-79.0925,43.0887],[-79.093,43.0905],[-79.093,43.0913],[-79.0919,43.0933],[-79.0917,43.0941],[-79.0915,43.094],[-79.0917,43.0941],[-79.0908,43.0967],[-79.0908,43.0981],[-79.0911,43.0998],[-79.0919,43.1022],[-79.0932,43.1043],[-79.0938,43.1044],[-79.0966,43.1039],[-79.098,43.1039],[-79.0998,43.1044],[-79.1019,43.1045],[-79.1032,43.1043],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]]],"simplified_patterns":[[[-79.1146,43.1041],[-79.0858,43.1044],[-79.0855,43.0984],[-79.0784,43.0986],[-79.0786,43.1045],[-79.074,43.1046],[-79.0732,43.1054],[-79.0732,43.107]],[[-79.0925,43.0887],[-79.093,43.0913],[-79.0915,43.094],[-79.0908,43.0981],[-79.0932,43.1043],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]]],"hide_from_list":false},{"id":"116","name":"Lundy's Ln.","short_name":"116","color":"#dd0000","text_color":"white","category":"niagara_falls","counterpart":"216","interlines":[],"patterns":[[[-79.0925,43.0887],[-79.0921,43.0876],[-79.0909,43.0876],[-79.091,43.0895],[-79.0849,43.0896],[-79.0848,43.0872]],[[-79.0848,43.0872],[-79.0847,43.0863],[-79.0911,43.086],[-79.0915,43.0864],[-79.0925,43.0887]],[[-79.1563,43.0862],[-79.1572,43.0862],[-79.1573,43.086],[-79.1549,43.0858],[-79.1519,43.0859],[-79.15,43.0865],[-79.1466,43.0882],[-79.1441,43.0887],[-79.1423,43.0886],[-79.1398,43.0888],[-79.1224,43.0891],[-79.1183,43.089],[-79.116,43.0892],[-79.0971,43.0895],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.1052,43.0893],[-79.1084,43.0894],[-79.1112,43.0892],[-79.1162,43.0893],[-79.1192,43.0891],[-79.1295,43.0889],[-79.1326,43.089],[-79.14,43.0887],[-79.1425,43.0888],[-79.1455,43.0885],[-79.1464,43.0882],[-79.1466,43.0883],[-79.1467,43.0881],[-79.15,43.0865],[-79.1519,43.0859],[-79.1549,43.0858],[-79.1563,43.0862]]],"simplified_patterns":[[[-79.0925,43.0887],[-79.0921,43.0876],[-79.0909,43.0876],[-79.091,43.0895],[-79.0849,43.0896],[-79.0848,43.0872]],[[-79.0848,43.0872],[-79.0847,43.0863],[-79.0911,43.086],[-79.0925,43.0887]],[[-79.1563,43.0862],[-79.1573,43.086],[-79.1519,43.0859],[-79.1441,43.0887],[-79.0971,43.0895],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.1425,43.0888],[-79.1466,43.0883],[-79.1519,43.0859],[-79.1563,43.0862]]],"hide_from_list":false},{"id":"203","name":"Dunn St. - Oldfield Rd.","short_name":"203","color":"#e87aab","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0925,43.0887],[-79.0927,43.0895],[-79.0802,43.0896],[-79.074,43.0933],[-79.0729,43.0941],[-79.0727,43.095],[-79.0729,43.0961],[-79.0728,43.0974],[-79.073,43.0987],[-79.0732,43.1054],[-79.0729,43.1056],[-79.0652,43.1056],[-79.0652,43.1066],[-79.0643,43.1067],[-79.0611,43.1067],[-79.0607,43.1065],[-79.0598,43.1074],[-79.0597,43.1082],[-79.06,43.1089],[-79.0619,43.1086],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.0978,43.0895],[-79.0979,43.0885],[-79.0977,43.0882],[-79.0975,43.0851],[-79.0973,43.0787],[-79.1059,43.0783],[-79.1101,43.0778],[-79.1099,43.0705],[-79.097,43.0708],[-79.097,43.0634],[-79.1096,43.0632],[-79.1098,43.0705],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1186,43.0658],[-79.1179,43.066],[-79.1176,43.0665],[-79.1173,43.0703],[-79.1262,43.0703],[-79.1262,43.069],[-79.126,43.0687],[-79.125,43.0683],[-79.1235,43.0681],[-79.1229,43.0677],[-79.1227,43.0673],[-79.1231,43.0657],[-79.1232,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1287,43.0643],[-79.1287,43.0702],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1185,43.0658],[-79.1178,43.066],[-79.1176,43.0663],[-79.1173,43.0703],[-79.1099,43.0705],[-79.1096,43.0633],[-79.1041,43.0632],[-79.0969,43.0634],[-79.0969,43.0705],[-79.0971,43.0719],[-79.0972,43.0785],[-79.0978,43.0894],[-79.0927,43.0895],[-79.0925,43.0887]]],"simplified_patterns":[[[-79.0925,43.0887],[-79.0927,43.0895],[-79.0802,43.0896],[-79.074,43.0933],[-79.0727,43.095],[-79.0732,43.1054],[-79.0652,43.1056],[-79.0652,43.1066],[-79.0643,43.1067],[-79.0607,43.1065],[-79.0597,43.1082],[-79.06,43.1089],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.0978,43.0895],[-79.0973,43.0787],[-79.1101,43.0778],[-79.1099,43.0705],[-79.097,43.0708],[-79.097,43.0634],[-79.1096,43.0632],[-79.1098,43.0705],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1186,43.0658],[-79.1176,43.0665],[-79.1173,43.0703],[-79.1262,43.0703],[-79.126,43.0687],[-79.1227,43.0673],[-79.1232,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1287,43.0643],[-79.1287,43.0702],[-79.1174,43.0704],[-79.1176,43.0667],[-79.1199,43.0667],[-79.1199,43.0658],[-79.1185,43.0658],[-79.1176,43.0663],[-79.1173,43.0703],[-79.1099,43.0705],[-79.1096,43.0633],[-79.0969,43.0634],[-79.0978,43.0894],[-79.0927,43.0895],[-79.0925,43.0887]]],"hide_from_list":true},{"id":"204","name":"Victoria Av.","short_name":"204","color":"#50b8e8","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0925,43.0887],[-79.0921,43.0876],[-79.0909,43.0876],[-79.0909,43.0895],[-79.0802,43.0896],[-79.0731,43.0939],[-79.0728,43.0943],[-79.0727,43.095],[-79.0729,43.0961],[-79.0728,43.0974],[-79.073,43.0987],[-79.0732,43.1054],[-79.0729,43.1056],[-79.0705,43.1056]],[[-79.0705,43.1056],[-79.0652,43.1056],[-79.0652,43.1066],[-79.0643,43.1067],[-79.0611,43.1067],[-79.0607,43.1065],[-79.0598,43.1074],[-79.0597,43.1082],[-79.06,43.1089],[-79.0619,43.1086],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0635,43.1078],[-79.0635,43.1076],[-79.0733,43.1076],[-79.0728,43.0943],[-79.0737,43.0935],[-79.0802,43.0896],[-79.0927,43.0895],[-79.0925,43.0887]]],"simplified_patterns":[[[-79.0925,43.0887],[-79.0921,43.0876],[-79.0909,43.0876],[-79.0909,43.0895],[-79.0802,43.0896],[-79.0731,43.0939],[-79.0732,43.1054],[-79.0705,43.1056]],[[-79.0705,43.1056],[-79.0652,43.1056],[-79.0652,43.1066],[-79.0643,43.1067],[-79.0607,43.1065],[-79.0597,43.1082],[-79.06,43.1089],[-79.0635,43.1086],[-79.0635,43.1078]],[[-79.0635,43.1078],[-79.0733,43.1076],[-79.0728,43.0943],[-79.0737,43.0935],[-79.0802,43.0896],[-79.0927,43.0895],[-79.0925,43.0887]]],"hide_from_list":true},{"id":"205","name":"Kalar Rd.","short_name":"205","color":"#e07050","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1248,43.0643],[-79.1248,43.0653],[-79.1243,43.066],[-79.123,43.0658],[-79.1232,43.0641],[-79.1231,43.0592],[-79.1296,43.0592],[-79.1295,43.0591],[-79.13,43.059],[-79.1352,43.0589],[-79.1351,43.0612],[-79.1355,43.0705],[-79.1355,43.0707],[-79.1353,43.0707],[-79.1355,43.0707],[-79.1355,43.0724],[-79.1353,43.0724],[-79.1355,43.0724],[-79.1355,43.0752],[-79.1357,43.0758],[-79.1358,43.078],[-79.1357,43.0804],[-79.1359,43.0818],[-79.1358,43.0835],[-79.136,43.0851],[-79.136,43.0885]],[[-79.1362,43.0877],[-79.136,43.0874],[-79.1358,43.077],[-79.1356,43.0758],[-79.1357,43.075],[-79.1355,43.0739],[-79.1354,43.0699],[-79.1483,43.0696],[-79.1482,43.0586],[-79.1352,43.0589],[-79.1352,43.065],[-79.1354,43.0658],[-79.1354,43.0699],[-79.1352,43.07],[-79.1262,43.0701],[-79.1262,43.0691],[-79.1259,43.0686],[-79.1256,43.0684],[-79.1232,43.068],[-79.1227,43.0674],[-79.1231,43.0659],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1258,43.1147],[-79.1268,43.1145],[-79.1375,43.1143],[-79.1375,43.1138],[-79.1376,43.1139],[-79.1374,43.1136],[-79.1375,43.1122],[-79.137,43.1057],[-79.1369,43.1005],[-79.1363,43.0939],[-79.1364,43.0927],[-79.1362,43.0919],[-79.1362,43.0877]],[[-79.136,43.0885],[-79.1368,43.1002],[-79.1368,43.104],[-79.1373,43.1099],[-79.1373,43.1142],[-79.1246,43.1146],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]]],"simplified_patterns":[[[-79.1248,43.0643],[-79.1243,43.066],[-79.123,43.0658],[-79.1231,43.0592],[-79.1352,43.0589],[-79.136,43.0885]],[[-79.1362,43.0877],[-79.1354,43.0699],[-79.1483,43.0696],[-79.1482,43.0586],[-79.1352,43.0589],[-79.1352,43.07],[-79.1262,43.0701],[-79.1259,43.0686],[-79.1227,43.0674],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1375,43.1143],[-79.1362,43.0877]],[[-79.136,43.0885],[-79.1373,43.1142],[-79.1246,43.1146],[-79.1248,43.1166],[-79.1236,43.1169]]],"hide_from_list":true},{"id":"206","name":"Stanley Av.-Ind. Park-Chippawa","short_name":"206","color":"#e8d800","text_color":"black","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0531,43.0602],[-79.0517,43.0596],[-79.0508,43.0589],[-79.0596,43.0522],[-79.0592,43.0516],[-79.058,43.0517],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.0925,43.0887],[-79.0915,43.0864],[-79.0903,43.0852],[-79.0866,43.0838],[-79.0861,43.0834],[-79.0845,43.0835],[-79.0841,43.0792],[-79.0847,43.0793],[-79.0857,43.0791],[-79.0896,43.079],[-79.0896,43.0774],[-79.0893,43.0767],[-79.0885,43.0728],[-79.0885,43.0726],[-79.0887,43.0726],[-79.0884,43.0724],[-79.0883,43.0712],[-79.0837,43.0713],[-79.0837,43.0705],[-79.0846,43.0693],[-79.0833,43.0686],[-79.082,43.0683],[-79.0817,43.068],[-79.0818,43.0677],[-79.0835,43.0666],[-79.0837,43.066],[-79.0838,43.0593],[-79.0834,43.0546],[-79.0885,43.0545],[-79.0883,43.0515],[-79.0831,43.0516],[-79.0836,43.0581],[-79.0837,43.0659],[-79.0834,43.0666],[-79.0819,43.0676],[-79.0814,43.0683],[-79.0794,43.0683],[-79.0774,43.0686],[-79.0765,43.0685],[-79.0758,43.0682],[-79.0742,43.0669],[-79.0731,43.0663],[-79.0531,43.0602]],[[-79.0465,43.0551],[-79.0465,43.056],[-79.0525,43.06],[-79.0683,43.0648],[-79.0723,43.0662],[-79.0738,43.0665],[-79.0755,43.068],[-79.0766,43.0685],[-79.0801,43.0683],[-79.0814,43.0684],[-79.0816,43.0678],[-79.0833,43.0668],[-79.0837,43.0661],[-79.0838,43.0601],[-79.0834,43.0546],[-79.0883,43.0545],[-79.0883,43.0516],[-79.0832,43.0516],[-79.0837,43.0661],[-79.0832,43.0669],[-79.0816,43.0678],[-79.0814,43.0684],[-79.0827,43.0685],[-79.0842,43.0693],[-79.0842,43.0696],[-79.0835,43.0704],[-79.0835,43.0723],[-79.0833,43.0723],[-79.0835,43.0723],[-79.0835,43.0743],[-79.0837,43.0747],[-79.084,43.0779],[-79.0839,43.0785],[-79.0843,43.0835],[-79.086,43.0834],[-79.0866,43.0838],[-79.0903,43.0852],[-79.0915,43.0864],[-79.0925,43.0887]]],"simplified_patterns":[[[-79.0531,43.0602],[-79.0508,43.0589],[-79.0596,43.0522],[-79.0592,43.0516],[-79.058,43.0517],[-79.0539,43.0549],[-79.0519,43.0536],[-79.0505,43.0547],[-79.0465,43.0551]],[[-79.0925,43.0887],[-79.0903,43.0852],[-79.0861,43.0834],[-79.0845,43.0835],[-79.0841,43.0792],[-79.0896,43.079],[-79.0896,43.0774],[-79.0883,43.0712],[-79.0837,43.0713],[-79.0846,43.0693],[-79.0817,43.068],[-79.0837,43.066],[-79.0834,43.0546],[-79.0885,43.0545],[-79.0883,43.0515],[-79.0831,43.0516],[-79.0837,43.0659],[-79.0814,43.0683],[-79.0765,43.0685],[-79.0731,43.0663],[-79.0531,43.0602]],[[-79.0465,43.0551],[-79.0465,43.056],[-79.0525,43.06],[-79.0738,43.0665],[-79.0766,43.0685],[-79.0814,43.0684],[-79.0837,43.0661],[-79.0834,43.0546],[-79.0883,43.0545],[-79.0883,43.0516],[-79.0832,43.0516],[-79.0837,43.0661],[-79.0814,43.0684],[-79.0842,43.0693],[-79.0833,43.0723],[-79.0843,43.0835],[-79.086,43.0834],[-79.0903,43.0852],[-79.0925,43.0887]]],"hide_from_list":true},{"id":"209","name":"Thorold Stone Rd. - Mt. Carmel","short_name":"209","color":"#9cb800","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1118,43.115],[-79.1113,43.1042],[-79.1146,43.1041]],[[-79.1248,43.1199],[-79.125,43.1199],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1247,43.1161],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1111,43.1052],[-79.1114,43.1065],[-79.1118,43.115],[-79.1168,43.115],[-79.1246,43.1146],[-79.1247,43.1161]],[[-79.1236,43.1169],[-79.1236,43.1178],[-79.1249,43.1178],[-79.1248,43.1184],[-79.1251,43.1216],[-79.1229,43.1217],[-79.1228,43.1201],[-79.1244,43.1198],[-79.1248,43.1199]]],"simplified_patterns":[[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1247,43.1146],[-79.1118,43.115],[-79.1113,43.1042],[-79.1146,43.1041]],[[-79.1248,43.1199],[-79.1248,43.1166],[-79.1236,43.1169]],[[-79.1247,43.1161],[-79.1236,43.1169]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1118,43.115],[-79.1246,43.1146],[-79.1247,43.1161]],[[-79.1236,43.1169],[-79.1236,43.1178],[-79.1249,43.1178],[-79.1251,43.1216],[-79.1229,43.1217],[-79.1228,43.1201],[-79.1248,43.1199]]],"hide_from_list":true},{"id":"210","name":"Drummond Rd.","short_name":"210","color":"#7090c8","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1146,43.1041],[-79.103,43.1044],[-79.0998,43.1044],[-79.0985,43.1041],[-79.0985,43.101],[-79.0983,43.1008],[-79.0981,43.0977],[-79.0918,43.0978],[-79.0908,43.098],[-79.0908,43.0967],[-79.0911,43.0955],[-79.0919,43.0933],[-79.093,43.0913],[-79.0929,43.0901],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.093,43.0905],[-79.093,43.0913],[-79.0919,43.0933],[-79.0917,43.0941],[-79.0915,43.094],[-79.0917,43.0941],[-79.0908,43.0967],[-79.0908,43.098],[-79.0918,43.0978],[-79.0981,43.0979],[-79.0985,43.1041],[-79.0998,43.1044],[-79.1019,43.1045],[-79.1032,43.1043],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1032],[-79.1152,43.1041],[-79.1146,43.1041]]],"simplified_patterns":[[[-79.1146,43.1041],[-79.0985,43.1041],[-79.0981,43.0977],[-79.0908,43.098],[-79.093,43.0913],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.093,43.0913],[-79.0915,43.094],[-79.0908,43.098],[-79.0981,43.0979],[-79.0985,43.1041],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1032],[-79.1146,43.1041]]],"hide_from_list":true},{"id":"211","name":"Dorchester Rd.","short_name":"211","color":"#e88868","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1248,43.0643],[-79.1287,43.0642],[-79.1287,43.0695],[-79.1285,43.07],[-79.1098,43.0705],[-79.11,43.0735],[-79.1099,43.0745],[-79.1101,43.0757],[-79.11,43.0777],[-79.1102,43.0787],[-79.1101,43.0805],[-79.1102,43.0804],[-79.1103,43.0817],[-79.1103,43.0869],[-79.1105,43.087],[-79.1106,43.0884],[-79.1105,43.0891],[-79.1108,43.0936],[-79.1106,43.094],[-79.1112,43.1012],[-79.1112,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.1113,43.1042],[-79.1113,43.0997],[-79.111,43.0976],[-79.1109,43.0943],[-79.1107,43.0935],[-79.1098,43.0705],[-79.1262,43.0703],[-79.1262,43.0691],[-79.1259,43.0686],[-79.1256,43.0684],[-79.1232,43.068],[-79.1227,43.0674],[-79.1231,43.0659],[-79.1231,43.0643],[-79.1248,43.0643]]],"simplified_patterns":[[[-79.1248,43.0643],[-79.1287,43.0642],[-79.1285,43.07],[-79.1098,43.0705],[-79.1112,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.1113,43.1042],[-79.1098,43.0705],[-79.1262,43.0703],[-79.1259,43.0686],[-79.1227,43.0674],[-79.1231,43.0643],[-79.1248,43.0643]]],"hide_from_list":true},{"id":"213","name":"Montrose - Mt Carmel - Heartland","short_name":"213","color":"#987058","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.132,43.0556],[-79.1319,43.0546],[-79.1289,43.0546],[-79.1268,43.0539],[-79.1229,43.0539],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1248,43.0653],[-79.1243,43.066],[-79.123,43.0658],[-79.1232,43.0635],[-79.1229,43.0539],[-79.1268,43.0539],[-79.1289,43.0546],[-79.1319,43.0546],[-79.132,43.059],[-79.1482,43.0586],[-79.1481,43.064],[-79.1482,43.0639],[-79.1483,43.0692],[-79.1481,43.0692],[-79.1483,43.0692],[-79.1483,43.0696],[-79.1261,43.0701],[-79.126,43.0714],[-79.1248,43.0713],[-79.1248,43.0718],[-79.1245,43.0725],[-79.1255,43.0727],[-79.1247,43.0747],[-79.1231,43.0768],[-79.1228,43.0779],[-79.123,43.0786],[-79.1232,43.0841],[-79.1231,43.088],[-79.1235,43.0915],[-79.1237,43.0973],[-79.1239,43.0978],[-79.1245,43.111],[-79.1244,43.1121],[-79.1248,43.1164],[-79.1248,43.1166],[-79.124,43.1166],[-79.1236,43.1164],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1243,43.1092],[-79.1239,43.0967],[-79.1236,43.0948],[-79.1235,43.0911],[-79.1233,43.0901],[-79.1234,43.089],[-79.1232,43.0882],[-79.1233,43.0861],[-79.1229,43.0774],[-79.1235,43.0762],[-79.1247,43.0748],[-79.126,43.0718],[-79.1262,43.0691],[-79.1256,43.0684],[-79.1232,43.068],[-79.1228,43.0676],[-79.1227,43.0671],[-79.123,43.0662],[-79.1232,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1248,43.0653],[-79.1243,43.066],[-79.123,43.0658],[-79.1232,43.0641],[-79.1231,43.0592],[-79.1296,43.0592],[-79.1295,43.0591],[-79.13,43.059],[-79.132,43.059],[-79.132,43.0556]]],"simplified_patterns":[[[-79.132,43.0556],[-79.1319,43.0546],[-79.1229,43.0539],[-79.1231,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1243,43.066],[-79.123,43.0658],[-79.1229,43.0539],[-79.1319,43.0546],[-79.132,43.059],[-79.1482,43.0586],[-79.1483,43.0696],[-79.1261,43.0701],[-79.126,43.0714],[-79.1248,43.0713],[-79.1245,43.0725],[-79.1255,43.0727],[-79.1228,43.0779],[-79.1248,43.1164],[-79.1236,43.1169]],[[-79.1236,43.1169],[-79.1236,43.1179],[-79.1249,43.1178],[-79.1229,43.0774],[-79.126,43.0718],[-79.1262,43.0691],[-79.1232,43.068],[-79.1227,43.0671],[-79.1232,43.0643],[-79.1248,43.0643]],[[-79.1248,43.0643],[-79.1243,43.066],[-79.123,43.0658],[-79.1231,43.0592],[-79.132,43.059],[-79.132,43.0556]]],"hide_from_list":true},{"id":"214","name":"Dorchester Rd. - Church's Ln.","short_name":"214","color":"#c070a0","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.0993,43.1188],[-79.0994,43.1199],[-79.0991,43.12],[-79.0948,43.1201],[-79.0952,43.1261],[-79.0927,43.1261],[-79.0921,43.1267],[-79.0921,43.1272],[-79.0919,43.1274],[-79.0904,43.1279],[-79.0898,43.1286],[-79.0884,43.1292],[-79.0869,43.1293],[-79.087,43.1303],[-79.093,43.1303],[-79.0929,43.1304],[-79.098,43.1299],[-79.1035,43.1302],[-79.1127,43.13],[-79.1128,43.1296],[-79.1126,43.1294],[-79.1124,43.1267],[-79.1123,43.1225],[-79.1025,43.1228],[-79.1013,43.1227],[-79.1001,43.1228],[-79.0998,43.123],[-79.0996,43.1224],[-79.0996,43.121],[-79.1003,43.1209],[-79.1003,43.1207],[-79.0999,43.1207],[-79.0998,43.1205],[-79.0999,43.1197],[-79.0995,43.1198],[-79.0994,43.1168],[-79.0991,43.1153],[-79.1002,43.1154],[-79.1024,43.1152],[-79.1118,43.115],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1153,43.1037],[-79.1152,43.1041],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1111,43.1052],[-79.1114,43.1065],[-79.1118,43.115],[-79.0989,43.1153],[-79.0994,43.1168],[-79.0993,43.1188]]],"simplified_patterns":[[[-79.0993,43.1188],[-79.0991,43.12],[-79.0948,43.1201],[-79.0952,43.1261],[-79.0927,43.1261],[-79.0898,43.1286],[-79.0869,43.1293],[-79.087,43.1303],[-79.1127,43.13],[-79.1123,43.1225],[-79.0998,43.123],[-79.0996,43.121],[-79.1003,43.1207],[-79.0995,43.1198],[-79.0991,43.1153],[-79.1118,43.115],[-79.1113,43.1042],[-79.1138,43.1042],[-79.1137,43.1033],[-79.1157,43.1033],[-79.1146,43.1041]],[[-79.1146,43.1041],[-79.1112,43.1042],[-79.1118,43.115],[-79.0989,43.1153],[-79.0993,43.1188]]],"hide_from_list":true},{"id":"216","name":"Lundy's Ln.","short_name":"216","color":"#dd0000","text_color":"white","category":"niagara_falls","counterpart":"","interlines":[],"patterns":[[[-79.1563,43.0862],[-79.1572,43.0862],[-79.1573,43.086],[-79.1549,43.0858],[-79.1519,43.0859],[-79.15,43.0865],[-79.1466,43.0882],[-79.1441,43.0887],[-79.1423,43.0886],[-79.1398,43.0888],[-79.1224,43.0891],[-79.1183,43.089],[-79.116,43.0892],[-79.0971,43.0895],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0848,43.0872],[-79.0847,43.0863],[-79.0911,43.086],[-79.0915,43.0864],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.1052,43.0893],[-79.1084,43.0894],[-79.1112,43.0892],[-79.1162,43.0893],[-79.1192,43.0891],[-79.1295,43.0889],[-79.1326,43.089],[-79.14,43.0887],[-79.1425,43.0888],[-79.1455,43.0885],[-79.1464,43.0882],[-79.1466,43.0883],[-79.1467,43.0881],[-79.15,43.0865],[-79.1519,43.0859],[-79.1549,43.0858],[-79.1563,43.0862]],[[-79.0925,43.0887],[-79.0921,43.0876],[-79.0909,43.0876],[-79.091,43.0895],[-79.0849,43.0896],[-79.0848,43.0872]]],"simplified_patterns":[[[-79.1563,43.0862],[-79.1573,43.086],[-79.1519,43.0859],[-79.1441,43.0887],[-79.0971,43.0895],[-79.0927,43.0895],[-79.0925,43.0887]],[[-79.0848,43.0872],[-79.0847,43.0863],[-79.0911,43.086],[-79.0925,43.0887]],[[-79.0925,43.0887],[-79.0927,43.0895],[-79.1425,43.0888],[-79.1466,43.0883],[-79.1519,43.0859],[-79.1563,43.0862]],[[-79.0925,43.0887],[-79.0921,43.0876],[-79.0909,43.0876],[-79.091,43.0895],[-79.0849,43.0896],[-79.0848,43.0872]]],"hide_from_list":true}];
+    const hubsData = [{"id":"3634","name":"Morrison-Dorchester Hub","lat":43.103486,"lon":-79.115698,"color":"#0CAB9B","size":"xl","category":"terminal","radius":7,"routes":[{"id":"40","color":"#4f809e","text_color":"#ffffff"},{"id":"45","color":"#4f809e","text_color":"#ffffff"},{"id":"50","color":"#e46c0a","text_color":"#ffffff"},{"id":"55","color":"#e46c0a","text_color":"#ffffff"},{"id":"60","color":"#8c73a6","text_color":"#000000"},{"id":"65","color":"#8c73a6","text_color":"#000000"}],"accessible":true},{"id":"3635","name":"MORRISON-DORCHESTER HUB - UPPER","lat":43.104125,"lon":-79.114575,"color":"#0CAB9B","size":"xl","category":"terminal","radius":7,"routes":[{"id":"102","color":"#8882bd","text_color":"#000000"},{"id":"108","color":"#04a559","text_color":"#ffffff"},{"id":"109","color":"#bdd732","text_color":"#000000"},{"id":"110","color":"#97afdb","text_color":"#000000"},{"id":"111","color":"#fbb19b","text_color":"#000000"},{"id":"114","color":"#d593c1","text_color":"#000000"},{"id":"115","color":"#000000","text_color":"#eeece1"},{"id":"209","color":"#bed734","text_color":"#000000"},{"id":"210","color":"#96aedb","text_color":"#000000"},{"id":"211","color":"#feae9b","text_color":"#000000"},{"id":"214","color":"#d792be","text_color":"#000000"}],"accessible":false},{"id":"6102","name":"NIAGARA FALLS BUS TERMINAL","lat":43.107801,"lon":-79.063514,"color":"#0CAB9B","size":"lg","category":"hub","radius":7,"routes":[{"id":"102","color":"#8882bd","text_color":"#000000"},{"id":"104","color":"#77caeb","text_color":"#000000"},{"id":"108","color":"#04a559","text_color":"#ffffff"},{"id":"203","color":"#f79ac3","text_color":"#000000"},{"id":"204","color":"#7dd3f7","text_color":"#000000"}],"accessible":true},{"id":"6133","name":"MAIN + FERRY HUB","lat":43.088659,"lon":-79.092531,"color":"#0CAB9B","size":"lg","category":"hub","radius":7,"routes":[{"id":"101","color":"#feb811","text_color":"#000000"},{"id":"102","color":"#8882bd","text_color":"#000000"},{"id":"103","color":"#f599c1","text_color":"#000000"},{"id":"104","color":"#77caeb","text_color":"#000000"},{"id":"106","color":"#fff34c","text_color":"#000000"},{"id":"107","color":"#cda793","text_color":"#000000"},{"id":"110","color":"#97afdb","text_color":"#000000"},{"id":"115","color":"#000000","text_color":"#eeece1"},{"id":"116","color":"#ff0000","text_color":"#ffffff"},{"id":"203","color":"#f79ac3","text_color":"#000000"},{"id":"204","color":"#7dd3f7","text_color":"#000000"},{"id":"206","color":"#fff34e","text_color":"#000000"},{"id":"210","color":"#96aedb","text_color":"#000000"},{"id":"216","color":"#ff0000","text_color":"#ffffff"}],"accessible":true},{"id":"6315","name":"CANADIAN DRIVE HUB","lat":43.064281,"lon":-79.124815,"color":"#0CAB9B","size":"lg","category":"hub","radius":7,"routes":[{"id":"22","color":"#db5e2c","text_color":"#ffffff"},{"id":"60","color":"#8c73a6","text_color":"#000000"},{"id":"65","color":"#8c73a6","text_color":"#000000"},{"id":"101","color":"#feb811","text_color":"#000000"},{"id":"103","color":"#f599c1","text_color":"#000000"},{"id":"105","color":"#eb9073","text_color":"#000000"},{"id":"111","color":"#fbb19b","text_color":"#000000"},{"id":"112","color":"#dfb7d9","text_color":"#000000"},{"id":"113","color":"#b79785","text_color":"#000000"},{"id":"203","color":"#f79ac3","text_color":"#000000"},{"id":"205","color":"#f79675","text_color":"#000000"},{"id":"211","color":"#feae9b","text_color":"#000000"},{"id":"213","color":"#b69686","text_color":"#000000"}],"accessible":true},{"id":"6443","name":"MT CARMEL PLAZA","lat":43.116943,"lon":-79.123562,"color":"#0CAB9B","size":"lg","category":"hub","radius":7,"routes":[{"id":"105","color":"#eb9073","text_color":"#000000"},{"id":"109","color":"#bdd732","text_color":"#000000"},{"id":"113","color":"#b79785","text_color":"#000000"},{"id":"205","color":"#f79675","text_color":"#000000"},{"id":"209","color":"#bed734","text_color":"#000000"},{"id":"213","color":"#b69686","text_color":"#000000"}],"accessible":true},{"id":"GDC","name":"NIAGARA COLLEGE - DANIEL J. PATTERSON CAMPUS","lat":43.152309,"lon":-79.166473,"color":"#0077BE","size":"lg","category":"college","radius":7,"routes":[{"id":"34","color":"#943734","text_color":"#ffffff"},{"id":"40","color":"#4f809e","text_color":"#ffffff"},{"id":"45","color":"#4f809e","text_color":"#ffffff"}],"accessible":false},{"id":"FVM","name":"FAIRVIEW MALL","lat":43.178413,"lon":-79.245514,"color":"#9B59B6","size":"md","category":"mall","radius":7,"routes":[{"id":"40","color":"#4f809e","text_color":"#ffffff"},{"id":"45","color":"#4f809e","text_color":"#ffffff"},{"id":"305","color":"#604a7b","text_color":"#ffffff"},{"id":"309","color":"#519177","text_color":"#ffffff"},{"id":"312","color":"#04a559","text_color":"#ffffff"},{"id":"314","color":"#bd4a5b","text_color":"#ffffff"},{"id":"409","color":"#519177","text_color":"#ffffff"},{"id":"412","color":"#524d59","text_color":"#ffffff"},{"id":"414","color":"#bd4a5b","text_color":"#ffffff"}],"accessible":true},{"id":"OUT","name":"Outlet Collection at Niagara","lat":43.15788,"lon":-79.1752,"color":"#9B59B6","size":"md","category":"mall","radius":7,"routes":[{"id":"40","color":"#4f809e","text_color":"#ffffff"},{"id":"45","color":"#4f809e","text_color":"#ffffff"}],"accessible":false},{"id":"6130","name":"PORTAGE RD + NIAGARA HEALTH SYSTEM - GNG","lat":43.0939,"lon":-79.091713,"color":"#E74C3C","size":"md","category":"hospital","radius":7,"routes":[{"id":"102","color":"#8882bd","text_color":"#000000"},{"id":"107","color":"#cda793","text_color":"#000000"},{"id":"210","color":"#96aedb","text_color":"#000000"}],"accessible":true},{"id":"6162","name":"PORTAGE RD + NIAGARA HEALTH SYSTEM - GNG","lat":43.094035,"lon":-79.09153,"color":"#E74C3C","size":"md","category":"hospital","radius":7,"routes":[{"id":"107","color":"#cda793","text_color":"#000000"},{"id":"115","color":"#000000","text_color":"#eeece1"},{"id":"210","color":"#96aedb","text_color":"#000000"}],"accessible":true}];
+
+    // Map configuration
+    const mapCenter = [-79.08, 43.09];
+    const zoomDesktop = 12;
+    const zoomMobile = 11.5;
+
+    // State
+    let map;
+    let selectedRoute = null;
+    let isDarkMode = false;
+    const isMobile = window.innerWidth < 768;
+
+    // Initialize map
+    mapboxgl.accessToken = 'pk.eyJ1IjoiamFrZWp1bGVzIiwiYSI6ImNsdm5lMTNsYzBjencybG1xbWl3ZnAxYTIifQ.-8aSePE9RIxnW058Y4m1wg';
+
+    map = new mapboxgl.Map({
+        container: 'system-map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: mapCenter,
+        zoom: isMobile ? zoomMobile : zoomDesktop,
+        attributionControl: false
+    });
+
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+    map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+
+    map.on('load', function() {
+        addRouteLayers();
+        addHubMarkers();
+        styleRoadLabels();
+        setupMapClickHandlers();
+        setupZoomOptimization();
+    });
+
+    // Hide shields during zoom for smoother performance
+    let zoomTimeout;
+    function setupZoomOptimization() {
+        map.on('zoomstart', () => {
+            if (map.getLayer('routes-shields')) {
+                map.setLayoutProperty('routes-shields', 'visibility', 'none');
+            }
+        });
+
+        map.on('zoomend', () => {
+            clearTimeout(zoomTimeout);
+            zoomTimeout = setTimeout(() => {
+                if (map.getLayer('routes-shields')) {
+                    map.setLayoutProperty('routes-shields', 'visibility', 'visible');
+                }
+            }, 100);
+        });
+    }
+
+    // Style major road labels (larger font, bigger halo)
+    function styleRoadLabels() {
+        const layers = map.getStyle().layers;
+        layers.forEach(layer => {
+            if (layer.type === 'symbol' && layer.id.includes('road-label')) {
+                // Increase text size for major roads
+                map.setLayoutProperty(layer.id, 'text-size', [
+                    'match',
+                    ['get', 'class'],
+                    ['motorway', 'trunk'], 16,
+                    ['primary', 'secondary'], 14,
+                    12  // default
+                ]);
+                // Increase halo width for all roads
+                map.setPaintProperty(layer.id, 'text-halo-width', [
+                    'match',
+                    ['get', 'class'],
+                    ['motorway', 'trunk', 'primary', 'secondary'], 2.5,
+                    2  // minor roads
+                ]);
+            }
+        });
+    }
+
+    // Select route (skipZoom = true to keep current map view)
+    function selectRoute(routeId, skipZoom = false) {
+        selectedRoute = routeId;
+
+        // Get selected route and its interlined routes
+        let route = routesData.find(r => r.id === routeId);
+        let parentRouteId = routeId;  // For highlighting the list item
+
+        // If this is a counterpart route (hidden from list), find its parent
+        if (route && route.hide_from_list) {
+            // Find the parent route that has this as its counterpart
+            const parentRoute = routesData.find(r => r.counterpart === routeId);
+            if (parentRoute) {
+                parentRouteId = parentRoute.id;
+            }
+        }
+
+        const interlinedRoutes = route ? (route.interlines || []) : [];
+
+        // Update button states - clear all first
+        document.querySelectorAll('.route-button').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.classList.remove('interlined');
+        });
+
+        // Highlight the parent route's button in the list
+        const selectedBtn = document.querySelector(`[data-route-id="${parentRouteId}"] .route-button`);
+        if (selectedBtn) {
+            selectedBtn.classList.add('selected');
+            selectedBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Highlight interlined routes
+        interlinedRoutes.forEach(interId => {
+            const interBtn = document.querySelector(`[data-route-id="${interId}"] .route-button`);
+            if (interBtn) {
+                interBtn.classList.add('interlined');
+            }
+        });
+
+        // Apply filter to show only selected and interlined routes
+        applyRouteFilter(routeId);
+
+        // Zoom to selected route (and include interlined routes in bounds)
+        if (!skipZoom && route && route.patterns.length > 0) {
+            const bounds = new mapboxgl.LngLatBounds();
+            route.patterns.forEach(pattern => {
+                pattern.forEach(point => bounds.extend(point));
+            });
+            // Also include interlined routes in the bounds
+            interlinedRoutes.forEach(interId => {
+                const interRoute = routesData.find(r => r.id === interId);
+                if (interRoute) {
+                    interRoute.patterns.forEach(pattern => {
+                        pattern.forEach(point => bounds.extend(point));
+                    });
+                }
+            });
+            map.fitBounds(bounds, { padding: 80, maxZoom: 14 });
+        }
+
+        // Mobile: update header
+        if (isMobile) {
+            const panel = document.getElementById('route-panel');
+            panel.classList.add('has-selection');
+            panel.classList.remove('expanded');
+
+            const badge = panel.querySelector('.selected-route-header .route-badge');
+            const name = panel.querySelector('.selected-route-header .route-name');
+
+            badge.textContent = routeId;
+            badge.style.backgroundColor = route.color;
+            badge.style.color = route.text_color;
+            name.textContent = route.name;
+        }
+
+        announce(`Route ${routeId} selected`);
+    }
+
+    // Show all routes
+    function showAllRoutes() {
+        selectedRoute = null;
+
+        // Clear all button states
+        document.querySelectorAll('.route-button').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.classList.remove('interlined');
+        });
+
+        // Clear filter to show all routes
+        clearRouteFilter();
+
+        if (isMobile) {
+            const panel = document.getElementById('route-panel');
+            panel.classList.remove('has-selection');
+        }
+
+        resetMap();
+        announce('Showing all routes');
+    }
+
+    // Deselect route (show all routes without changing zoom)
+    function deselectRoute() {
+        if (!selectedRoute) return;
+
+        selectedRoute = null;
+
+        // Clear all button states
+        document.querySelectorAll('.route-button').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.classList.remove('interlined');
+        });
+
+        // Clear filter to show all routes
+        clearRouteFilter();
+
+        if (isMobile) {
+            const panel = document.getElementById('route-panel');
+            panel.classList.remove('has-selection');
+        }
+
+        announce('Showing all routes');
+    }
+
+    // Reset map
+    function resetMap() {
+        map.flyTo({
+            center: mapCenter,
+            zoom: isMobile ? zoomMobile : zoomDesktop,
+            duration: 1000
+        });
+    }
+
+    // Toggle category
+    function toggleCategory(categoryId) {
+        const header = document.querySelector(`[onclick="toggleCategory('${categoryId}')"]`);
+        const list = document.getElementById(`routes-${categoryId}`);
+
+        const isExpanded = header.getAttribute('aria-expanded') === 'true';
+        header.setAttribute('aria-expanded', !isExpanded);
+        list.classList.toggle('collapsed');
+    }
+
+    // Filter routes
+    function filterRoutes(query) {
+        query = query.toLowerCase().trim();
+
+        document.querySelectorAll('.route-item').forEach(item => {
+            const routeId = item.dataset.routeId;
+            const route = routesData.find(r => r.id === routeId);
+
+            if (!query || routeId.includes(query) || (route && route.name.toLowerCase().includes(query))) {
+                item.style.display = 'grid';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Expand all categories when searching
+        if (query) {
+            document.querySelectorAll('.category-header').forEach(h => {
+                h.setAttribute('aria-expanded', 'true');
+            });
+            document.querySelectorAll('.route-list').forEach(l => {
+                l.classList.remove('collapsed');
+            });
+        }
+    }
+
+    // Toggle help section
+    function toggleHelp() {
+        document.getElementById('helpSection').classList.toggle('expanded');
+    }
+
+    // Toggle bottom sheet
+    function toggleBottomSheet() {
+        const panel = document.getElementById('route-panel');
+        panel.classList.toggle('expanded');
+    }
+
+    function closeBottomSheet() {
+        document.getElementById('route-panel').classList.remove('expanded');
+    }
+
+    // Dark mode
+    function toggleDarkMode() {
+        isDarkMode = !isDarkMode;
+        document.body.classList.toggle('dark-mode', isDarkMode);
+
+        const sunIcon = document.querySelector('.sun-icon');
+        const moonIcon = document.querySelector('.moon-icon');
+        sunIcon.style.display = isDarkMode ? 'none' : 'block';
+        moonIcon.style.display = isDarkMode ? 'block' : 'none';
+
+        map.setStyle(isDarkMode ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12');
+
+        // Re-add layers after style loads
+        map.once('style.load', function() {
+            addRouteLayers();
+            addHubMarkers();
+            if (!isDarkMode) styleRoadLabels();
+        });
+    }
+
+    // Add route layers function (reusable) - OPTIMIZED: uses single combined source with 3 layers
+    function addRouteLayers() {
+        // Remove existing layers and source if present
+        ['routes-shields', 'routes-line', 'routes-outline'].forEach(id => {
+            if (map.getLayer(id)) map.removeLayer(id);
+        });
+        if (map.getSource('routes-combined')) map.removeSource('routes-combined');
+
+        // Build combined GeoJSON FeatureCollection
+        const features = [];
+        routesData.forEach(route => {
+            const patterns = isMobile ? route.simplified_patterns : route.patterns;
+            patterns.forEach((pattern, idx) => {
+                features.push({
+                    type: 'Feature',
+                    properties: {
+                        routeId: route.id,
+                        color: route.color,
+                        patternIdx: idx
+                    },
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: pattern
+                    }
+                });
+            });
+        });
+
+        map.addSource('routes-combined', {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: features
+            }
+        });
+
+        // Find first label layer to insert routes below
+        const layers = map.getStyle().layers;
+        let labelLayerId;
+        for (const layer of layers) {
+            if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+                labelLayerId = layer.id;
+                break;
+            }
+        }
+
+        // Single outline layer
+        map.addLayer({
+            id: 'routes-outline',
+            type: 'line',
+            source: 'routes-combined',
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            paint: {
+                'line-color': '#000000',
+                'line-width': 6,
+                'line-opacity': 0.6
+            }
+        }, labelLayerId);
+
+        // Single route line layer with data-driven color
+        map.addLayer({
+            id: 'routes-line',
+            type: 'line',
+            source: 'routes-combined',
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            paint: {
+                'line-color': ['get', 'color'],
+                'line-width': 4,
+                'line-opacity': 1
+            }
+        }, labelLayerId);
+
+        // Interlined routes layer - dashed line (hidden by default)
+        map.addLayer({
+            id: 'routes-interline',
+            type: 'line',
+            source: 'routes-combined',
+            filter: ['==', ['get', 'routeId'], ''],
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'butt'
+            },
+            paint: {
+                'line-color': ['get', 'color'],
+                'line-width': 4,
+                'line-opacity': 1,
+                'line-dasharray': [2, 4]
+            }
+        }, labelLayerId);
+
+        // Single shields layer with data-driven text
+        map.addLayer({
+            id: 'routes-shields',
+            type: 'symbol',
+            source: 'routes-combined',
+            layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': isMobile ? 500 : 800,
+                'text-field': ['get', 'routeId'],
+                'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+                'text-size': 16,
+                'text-rotation-alignment': 'viewport',
+                'text-allow-overlap': false,
+                'text-ignore-placement': false
+            },
+            paint: {
+                'text-color': '#ffffff',
+                'text-halo-color': '#000000',
+                'text-halo-width': 2
+            }
+        });
+
+        // Restore filter if a route was selected before style reload
+        if (selectedRoute) {
+            applyRouteFilter(selectedRoute);
+        }
+    }
+
+    // Apply filter to show only specific routes
+    function applyRouteFilter(routeId) {
+        const route = routesData.find(r => r.id === routeId);
+        const interlinedRoutes = route ? (route.interlines || []) : [];
+        const visibleRoutes = [routeId, ...interlinedRoutes];
+
+        const allFilter = ['in', ['get', 'routeId'], ['literal', visibleRoutes]];
+        const primaryFilter = ['==', ['get', 'routeId'], routeId];
+
+        // Outline shows all (primary + interlined)
+        map.setFilter('routes-outline', allFilter);
+        map.setFilter('routes-shields', allFilter);
+
+        if (interlinedRoutes.length > 0) {
+            // Primary route: solid line
+            map.setFilter('routes-line', primaryFilter);
+            map.setPaintProperty('routes-line', 'line-opacity', 1);
+
+            // Interlined routes: dashed line
+            const interlineFilter = ['in', ['get', 'routeId'], ['literal', interlinedRoutes]];
+            map.setFilter('routes-interline', interlineFilter);
+
+            // Outline styling
+            map.setPaintProperty('routes-outline', 'line-opacity', [
+                'case',
+                ['==', ['get', 'routeId'], routeId], 0.6,
+                0.4
+            ]);
+            map.setPaintProperty('routes-outline', 'line-color', [
+                'case',
+                ['==', ['get', 'routeId'], routeId], '#000000',
+                '#ffffff'
+            ]);
+        } else {
+            // No interlines - standard solid display
+            map.setFilter('routes-line', allFilter);
+            map.setFilter('routes-interline', ['==', ['get', 'routeId'], '']);
+            map.setPaintProperty('routes-line', 'line-opacity', 1);
+            map.setPaintProperty('routes-outline', 'line-opacity', 0.6);
+            map.setPaintProperty('routes-outline', 'line-color', '#000000');
+        }
+    }
+
+    // Clear filter to show all routes
+    function clearRouteFilter() {
+        map.setFilter('routes-outline', null);
+        map.setFilter('routes-line', null);
+        map.setFilter('routes-shields', null);
+        map.setFilter('routes-interline', ['==', ['get', 'routeId'], '']);
+        map.setPaintProperty('routes-line', 'line-opacity', 1);
+        map.setPaintProperty('routes-outline', 'line-opacity', 0.8);
+        map.setPaintProperty('routes-outline', 'line-color', '#000000');
+    }
+
+    // Setup click handlers for shield labels and map background
+    function setupMapClickHandlers() {
+        // Click on shield to select route
+        map.on('click', 'routes-shields', (e) => {
+            e.preventDefault();
+            if (e.originalEvent) e.originalEvent.stopPropagation();
+            const routeId = e.features[0].properties.routeId;
+            selectRoute(routeId, true);  // skipZoom = true
+        });
+
+        // Click on interlined route line to select that route
+        map.on('click', 'routes-interline', (e) => {
+            e.preventDefault();
+            if (e.originalEvent) e.originalEvent.stopPropagation();
+            const routeId = e.features[0].properties.routeId;
+            selectRoute(routeId, true);
+        });
+
+        // Change cursor on hover over shields and interlined routes
+        map.on('mouseenter', 'routes-shields', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'routes-shields', () => {
+            map.getCanvas().style.cursor = '';
+        });
+        map.on('mouseenter', 'routes-interline', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'routes-interline', () => {
+            map.getCanvas().style.cursor = '';
+        });
+
+        // Click on map background to deselect (show all routes)
+        map.on('click', (e) => {
+            // Check if click was on the shield or interline layer
+            const features = map.queryRenderedFeatures(e.point, {
+                layers: ['routes-shields', 'routes-interline']
+            });
+
+            // If not clicking on a shield and a route is selected, deselect
+            if (features.length === 0 && selectedRoute) {
+                deselectRoute();
+            }
+        });
+    }
+
+    // Store hub markers for re-adding
+    let hubMarkers = [];
+
+    function buildPopupHTML(hub) {
+        const categoryLabels = {
+            'terminal': 'Bus Terminal',
+            'hub': 'Transit Hub',
+            'university': 'University',
+            'college': 'College',
+            'hospital': 'Hospital',
+            'mall': 'Shopping Centre',
+            'municipal': 'Municipal Centre'
+        };
+        const categoryLabel = categoryLabels[hub.category] || hub.category;
+
+        let routesHTML = '';
+        if (hub.routes && hub.routes.length > 0) {
+            const badges = hub.routes.map(r =>
+                `<span class="hub-popup-route-badge" style="background:${r.color};color:${r.text_color}" onclick="selectRoute('${r.id}', false)">${r.id}</span>`
+            ).join('');
+            routesHTML = `
+                <div class="hub-popup-body">
+                    <div class="hub-popup-label">Routes Served</div>
+                    <div class="hub-popup-routes">${badges}</div>
+                </div>`;
+        }
+
+        const accessibleHTML = hub.accessible
+            ? `<div class="hub-popup-footer">&#9855; Wheelchair Accessible</div>`
+            : '';
+
+        return `
+            <div class="hub-popup-header" style="background:${hub.color}">
+                <div>
+                    <div class="hub-popup-name">${hub.name}</div>
+                    <div class="hub-popup-category">${categoryLabel}</div>
+                </div>
+            </div>
+            ${routesHTML}
+            ${accessibleHTML}
+        `;
+    }
+
+    function addHubMarkers() {
+        // Remove existing markers
+        hubMarkers.forEach(m => m.remove());
+        hubMarkers = [];
+
+        hubsData.forEach(hub => {
+            const el = document.createElement('div');
+            el.className = 'hub-marker';
+            el.style.width = (hub.radius * 2 + 4) + 'px';
+            el.style.height = (hub.radius * 2 + 4) + 'px';
+            el.style.backgroundColor = hub.color;
+            el.style.borderRadius = '50%';
+            el.style.border = '2px solid white';
+            el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+            el.style.cursor = 'pointer';
+            el.title = hub.name;
+
+            const marker = new mapboxgl.Marker(el)
+                .setLngLat([hub.lon, hub.lat])
+                .setPopup(new mapboxgl.Popup({ offset: 15, maxWidth: '260px' }).setHTML(
+                    buildPopupHTML(hub)
+                ))
+                .addTo(map);
+
+            hubMarkers.push(marker);
+        });
+    }
+
+    // Accessibility announcement
+    function announce(message) {
+        const liveRegion = document.getElementById('aria-live');
+        liveRegion.textContent = message;
+    }
+</script>
+
+</body>
+</html>
